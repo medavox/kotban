@@ -31,9 +31,8 @@ import java.nio.charset.CharsetDecoder
  * @author Georgios Migdos
  */
 object CharsetDetector {
-
+    private val charsets = Charset.availableCharsets()
     fun detectCharset(f:File):Charset? {
-        val charsets = Charset.availableCharsets()
         return charsets.values.map{detectCharset(f, it)}.firstOrNull{it != null}
     }
 
