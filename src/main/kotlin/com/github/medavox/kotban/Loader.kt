@@ -22,8 +22,9 @@ object Loader {
             //println("stuff in '$it': ${Arrays.toString(it.listFiles())}")
             subdir.name to (subdir.listFiles() ?: arrayOf()).filter {file:File ->
                 //println("file in $subdir: $file")
-                //filter out non-files, unreadables, nonexistent, and files >10MB
-                file.isFile && file.canRead() && file.exists() && file.length() < (10240 * 1024)
+                //filter out non-files, without the right extensions, unreadables, nonexistent, and files >10MB
+                file.isFile && file.canRead() && file.exists() && file.length() < (10240 * 1024) &&
+                        (file.name.endsWith(".md") || file.name.endsWith(".txt") )
             }.associateWith { foil ->
                 //detect charsets
                 CharsetDetector.detectCharset(foil)
@@ -32,7 +33,7 @@ object Loader {
                 println("encoding of $file: $encoding")
                 encoding != null
             }.map { (file, charset) ->
-                Item(title = file.name, contents = file.readText(charset!!))
+                Item(title = file.name, contents = file.readText())
             }
         }
         println("panes: $subDirsAndTheirItems")
