@@ -1,13 +1,14 @@
 package com.github.medavox.kotban
 
+import javafx.geometry.Orientation
 import javafx.scene.Parent
-import tornadofx.View
-import tornadofx.gridpane
+import tornadofx.*
+import tornadofx.Stylesheet.Companion.datagrid
+import java.io.File
 
 //some more tutorial & learning resources;
 //https://docs.oracle.com/javase/8/javafx/get-started-tutorial/form.htm#CFHEAHGB
 //https://docs.oracle.com/javase/8/javafx/get-started-tutorial/hello_world.htm
-//
 /**Provides a Desktop GUI for the library.
  * Implemented with JavaFX, available as part of Java 8's language API.
  * Note that after Java 8, JavaFX was made an external library.
@@ -17,8 +18,27 @@ class Gui : View() {
     //language choice = dropdown list
     //result = multi-line text output field
     //errors = multi-line text output field
-    override val root: Parent = gridpane {
 
+    val board = Loader.load(File("./testboard"))
+    override val root: Parent = flowpane {
+        title = board.name
+        orientation = Orientation.VERTICAL
+        //label(board.name)
+        for((name, entries) in board.panes) {
+            /*panes*/hbox{
+                label(name)//todo: do the label some other way
+                scrollpane {
+                    content=vbox {
+                        for (entry in entries) {
+                            titledpane {
+                                text = entry.title
+                                content = textarea { text = entry.contents }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 /*
     override fun start(primaryStage:Stage) {
