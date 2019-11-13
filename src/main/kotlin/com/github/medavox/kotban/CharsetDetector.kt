@@ -25,6 +25,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.Charset
 import java.nio.charset.CharsetDecoder
+import java.util.*
 
 /**
  * from https://gmigdos.wordpress.com/2010/04/08/java-how-to-auto-detect-a-files-encoding/
@@ -33,17 +34,18 @@ import java.nio.charset.CharsetDecoder
 object CharsetDetector {
     private val charsets = Charset.availableCharsets()
     fun detectCharset(f:File):Charset? {
+        //println("available charsets:"+ Arrays.toString(charsets.keys.toTypedArray()))
         return charsets.values.map{detectCharset(f, it)}.firstOrNull{it != null}
     }
 
     private fun detectCharset(f:File, charset:Charset):Charset? {
         try {
-            val input:BufferedInputStream = BufferedInputStream(FileInputStream(f))
+            val input = BufferedInputStream(FileInputStream(f))
 
             val decoder:CharsetDecoder = charset.newDecoder()
             decoder.reset()
 
-            val buffer:ByteArray = ByteArray(512)
+            val buffer = ByteArray(512)
             var identified = false
             while ((input.read(buffer) != -1) && (!identified)) {
                 identified = identify(buffer, decoder)
@@ -51,12 +53,7 @@ object CharsetDetector {
 
             input.close()
 
-            if (identified) {
-                return charset
-            } else {
-                return null
-            }
-
+            return if (identified) charset else null
         } catch (e:Exception) {
             return null
         }
