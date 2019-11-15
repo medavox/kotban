@@ -11,6 +11,7 @@ import javafx.scene.layout.HBox
 import javafx.stage.Stage
 import java.io.File
 import javafx.scene.layout.VBox
+import tornadofx.fitToHeight
 
 //terminology:
 //board: the whole thing. A folder with subfolders that each contain 0 or more text files
@@ -28,24 +29,30 @@ import javafx.scene.layout.VBox
  * Note that after Java 8, JavaFX was made an external library.
  * @see [https://docs.oracle.com/javase/8/javafx/api](JavaFX javadoc)*/
 class Gui : Application() {
-    /*Instead of making entries editable (andd effedctively having to write our own text editor),
+    /*Instead of making entries editable (and effectively having to write our own text editor),
     * make each entry, upon being clicked, open itself in the user's choice of editor.
-    * That allows us to focus on making thw Markdown pretty, too*/
+    * That allows us to focus on prettifying the Markdown */
     override fun start(primaryStage:Stage) {
-        /*val root = GridPane()
-        root.setAlignment(Pos.CENTER)
-        root.setHgap(10.0); root.setVgap(10.0)
-        root.setPadding(Insets(10.0, 10.0, 10.0, 10.0))*/
 
-        //val out = PrintStreamCapturer(output, System.out)
-        val root = HBox()
-        root.setPrefSize(600.0, 600.0)
+        val columns = HBox()
+        val root = AnchorPane().also { rwt ->
+            rwt.children.add(ScrollPane().also { colScrol ->
+                /*AnchorPane.setTopAnchor(colScrol, 0.0)
+                AnchorPane.setBottomAnchor(colScrol, 0.0)
+                AnchorPane.setLeftAnchor(colScrol, 0.0)
+                AnchorPane.setRightAnchor(colScrol, 0.0)*/
+                colScrol.isFitToHeight = true
+                colScrol.isFitToWidth = true
+                colScrol.content = columns
+            })
+        }
+
+        //root.setPrefSize(600.0, 600.0)
 
         System.setErr(System.err)
         val board = Loader.load(File("./testboard"))
         for((name, entries) in board.panes) {
-            //label(name)//todo: do the label some other way
-            root.children.add(VBox().also{ col ->
+            columns.children.add(VBox().also { col ->
                 col.children.add(Label(name))
                 col.children.add(AnchorPane().also { anch ->
                     anch.children.add(ScrollPane().also { scrol ->
@@ -54,9 +61,9 @@ class Gui : Application() {
                         AnchorPane.setBottomAnchor(scrol, 0.0)
                         AnchorPane.setLeftAnchor(scrol, 0.0)
                         AnchorPane.setRightAnchor(scrol, 0.0)
-                        scrol.content = VBox().also { vbox ->
+                        scrol.content = VBox().also { notes ->
                             for (entry in entries) {
-                                vbox.children.add(TitledPane(entry.title,
+                                notes.children.add(TitledPane(entry.title,
                                     TextArea(entry.contents).apply{isEditable=false}))
                             }
                         }
@@ -65,15 +72,8 @@ class Gui : Application() {
             })
         }
 
-
-/*        root.add(input, 0, 0, 2, 1)
-        root.add(menuButton, 0, 1)
-        root.add(btn, 1, 1)
-        root.add(output, 0, 3, 2, 1)
-        root.add(errors, 0, 4, 2, 1)*/
-
         primaryStage.title = board.name+" - Kotban"
-        primaryStage.scene = Scene(root, 400.0, 400.0)
+        primaryStage.scene = Scene(root, 600.0, 600.0)
         primaryStage.show()
     }
 }
