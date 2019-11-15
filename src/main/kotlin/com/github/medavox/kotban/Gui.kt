@@ -1,65 +1,36 @@
 package com.github.medavox.kotban
 
 import javafx.application.Application
-import javafx.geometry.Orientation
-import javafx.scene.Parent
 import javafx.scene.Scene
-import javafx.scene.control.Button
+import javafx.scene.control.Label
 import javafx.scene.control.ScrollPane
 import javafx.scene.control.TextArea
 import javafx.scene.control.TitledPane
 import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.HBox
 import javafx.stage.Stage
-import tornadofx.*
-import tornadofx.Stylesheet.Companion.datagrid
 import java.io.File
 import javafx.scene.layout.VBox
 
+//terminology:
+//board: the whole thing. A folder with subfolders that each contain 0 or more text files
+//column: contains notes/tasks. represented on-disk by a subfolder of the board
+//note: a task. can be moved between columns. represented on-disk by a text file
 
-
-//some more tutorial & learning resources;
-//https://docs.oracle.com/javase/8/javafx/get-started-tutorial/form.htm#CFHEAHGB
-//https://docs.oracle.com/javase/8/javafx/get-started-tutorial/hello_world.htm
+//todo:
+// need a filer watcher, to auto-refresh external changes
+//   or just a refresh button
+// need to be able to drag notes between columns,
+// create and delete notes,
+// create and delete columns
 /**Provides a Desktop GUI for the library.
  * Implemented with JavaFX, available as part of Java 8's language API.
  * Note that after Java 8, JavaFX was made an external library.
  * @see [https://docs.oracle.com/javase/8/javafx/api](JavaFX javadoc)*/
 class Gui : Application() {
-    //input = multi-line text input field
-    //language choice = dropdown list
-    //result = multi-line text output field
-    //errors = multi-line text output field
-
     /*Instead of making entries editable (andd effedctively having to write our own text editor),
     * make each entry, upon being clicked, open itself in the user's choice of editor.
     * That allows us to focus on making thw Markdown pretty, too*/
-    /*override val root: Parent = flowpane {
-        orientation = Orientation.VERTICAL
-        //label(board.name)
-        for((name, entries) in board.panes) {
-            *//*panes*//*hbox{
-                label(name)//todo: do the label some other way
-                anchorpane {
-                    anchorpaneConstraints{ AnchorPaneConstraint(0.0, 0.0, 0.0, 0.0)}
-                    scrollpane(fitToWidth = true) {
-                        //useMaxHeight = true
-                        //maxHeight = 100.0
-                        vbarPolicy = ScrollPane.ScrollBarPolicy.ALWAYS
-                        vbox {
-                            for (entry in entries) {
-                                titledpane {
-                                    text = entry.title
-                                    content = textarea { text = entry.contents }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }*/
-
     override fun start(primaryStage:Stage) {
         /*val root = GridPane()
         root.setAlignment(Pos.CENTER)
@@ -74,22 +45,24 @@ class Gui : Application() {
         val board = Loader.load(File("./testboard"))
         for((name, entries) in board.panes) {
             //label(name)//todo: do the label some other way
-            //root.children.add()
-            val anchorPane = AnchorPane()
-            val scrollPane = ScrollPane()
-            val vb2 = VBox()
-
-            AnchorPane.setTopAnchor(scrollPane, 0.0)
-            AnchorPane.setBottomAnchor(scrollPane, 0.0)
-            AnchorPane.setLeftAnchor(scrollPane, 0.0)
-            AnchorPane.setRightAnchor(scrollPane, 0.0)
-            anchorPane.children.add(scrollPane)
-            //Add content ScrollPane
-            scrollPane.content = vb2
-            for (entry in entries) {
-                vb2.children.add(TitledPane(entry.title, TextArea(entry.contents)))
-            }
-            root.children.add(anchorPane)
+            root.children.add(VBox().also{ col ->
+                col.children.add(Label(name))
+                col.children.add(AnchorPane().also { anch ->
+                    anch.children.add(ScrollPane().also { scrol ->
+                        //scrol.isFitToWidth = true
+                        AnchorPane.setTopAnchor(scrol, 0.0)
+                        AnchorPane.setBottomAnchor(scrol, 0.0)
+                        AnchorPane.setLeftAnchor(scrol, 0.0)
+                        AnchorPane.setRightAnchor(scrol, 0.0)
+                        scrol.content = VBox().also { vbox ->
+                            for (entry in entries) {
+                                vbox.children.add(TitledPane(entry.title,
+                                    TextArea(entry.contents).apply{isEditable=false}))
+                            }
+                        }
+                    })
+                })
+            })
         }
 
 
