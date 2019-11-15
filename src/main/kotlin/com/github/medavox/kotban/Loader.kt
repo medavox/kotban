@@ -35,7 +35,7 @@ object Loader {
             }.map { (file, charset) ->
                 Item(title = file.name, contents = file.readText())
             }
-        }
+        }.filter { it.value.isNotEmpty() }
         println("panes: $subDirsAndTheirItems")
         return Board(name=dir.name, panes=subDirsAndTheirItems)
     }
