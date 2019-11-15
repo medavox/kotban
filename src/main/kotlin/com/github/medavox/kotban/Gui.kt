@@ -1,11 +1,9 @@
 package com.github.medavox.kotban
 
 import javafx.application.Application
+import javafx.geometry.Orientation
 import javafx.scene.Scene
-import javafx.scene.control.Label
-import javafx.scene.control.ScrollPane
-import javafx.scene.control.TextArea
-import javafx.scene.control.TitledPane
+import javafx.scene.control.*
 import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.HBox
 import javafx.stage.Stage
@@ -37,12 +35,12 @@ class Gui : Application() {
         val columns = HBox()
         val root = AnchorPane().also { rwt ->
             rwt.children.add(ScrollPane().also { colScrol ->
-                /*AnchorPane.setTopAnchor(colScrol, 0.0)
+                AnchorPane.setTopAnchor(colScrol, 0.0)
                 AnchorPane.setBottomAnchor(colScrol, 0.0)
                 AnchorPane.setLeftAnchor(colScrol, 0.0)
-                AnchorPane.setRightAnchor(colScrol, 0.0)*/
+                AnchorPane.setRightAnchor(colScrol, 0.0)
                 colScrol.isFitToHeight = true
-                colScrol.isFitToWidth = true
+                //colScrol.isFitToWidth = true
                 colScrol.content = columns
             })
         }
@@ -56,7 +54,7 @@ class Gui : Application() {
                 col.children.add(Label(name))
                 col.children.add(AnchorPane().also { anch ->
                     anch.children.add(ScrollPane().also { scrol ->
-                        //scrol.isFitToWidth = true
+                        scrol.isFitToWidth = true
                         AnchorPane.setTopAnchor(scrol, 0.0)
                         AnchorPane.setBottomAnchor(scrol, 0.0)
                         AnchorPane.setLeftAnchor(scrol, 0.0)
