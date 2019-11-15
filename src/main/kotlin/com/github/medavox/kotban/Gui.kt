@@ -8,6 +8,7 @@ import javafx.scene.layout.HBox
 import javafx.stage.Stage
 import java.io.File
 import javafx.scene.layout.VBox
+import javafx.scene.control.ButtonBar
 
 //terminology:
 //board: the whole thing. A folder with subfolders that each contain 0 or more text files
@@ -20,6 +21,8 @@ import javafx.scene.layout.VBox
 // need to be able to drag notes between columns,
 // create and delete notes,
 // create and delete columns
+// edit column names (which are actually folder names)
+// edit note names (which are actually file names)
 // click-to-maximise a single note
 // tags - supported through a custom line in the note's text
 // filter by tag
@@ -32,24 +35,46 @@ class Gui : Application() {
     * make each entry, upon being clicked, open itself in the user's choice of editor.
     * That allows us to focus on prettifying the Markdown */
     override fun start(primaryStage:Stage) {
+        val root = VBox()
 
-        val columns = HBox()
-        val root = AnchorPane().also { rwt ->
-            rwt.children.add(ScrollPane().also { colScrol ->
-                AnchorPane.setTopAnchor(colScrol, 0.0)
-                AnchorPane.setBottomAnchor(colScrol, 0.0)
-                AnchorPane.setLeftAnchor(colScrol, 0.0)
-                AnchorPane.setRightAnchor(colScrol, 0.0)
-                colScrol.isFitToHeight = true
-                //colScrol.isFitToWidth = true
-                colScrol.content = columns
-            })
+        val colScrol = ScrollPane().apply {
+            AnchorPane.setTopAnchor(this, 0.0)
+            AnchorPane.setBottomAnchor(this, 0.0)
+            AnchorPane.setLeftAnchor(this, 0.0)
+            AnchorPane.setRightAnchor(this, 0.0)
+            isFitToHeight = true
+            val board = load(File("./testboard"))
+            primaryStage.title = board.name+" - Kotban"
+            content = layitout(board, primaryStage)
         }
+        val content = AnchorPane()
+        content.children.add(colScrol)
+
+        root.children.add(ButtonBar().also{ bar ->
+            //bar.nodeOrientation = NodeOrientation.LEFT_TO_RIGHT
+            //bar.ali
+            bar.buttons.add(
+                Button("Rifrash").apply{
+                    setOnMouseClicked {
+                        val board = load(File("./testboard"))
+                        primaryStage.title = board.name+" - Kotban"
+                        colScrol.content = layitout(board, primaryStage)
+                    }
+                }
+            )
+        })
+        root.children.add(content)
 
         //root.setPrefSize(600.0, 600.0)
 
-        System.setErr(System.err)
-        val board = Loader.load(File("./testboard"))
+        layitout(load(File("./testboard")), primaryStage)
+
+        primaryStage.scene = Scene(root, 600.0, 600.0)
+        primaryStage.show()
+    }
+
+    private fun layitout(board:Board, stg:Stage):HBox {
+        val columns = HBox()
         for((name, entries) in board.panes) {
             columns.children.add(VBox().also { col ->
                 col.children.add(Label(name))
@@ -69,17 +94,14 @@ class Gui : Application() {
                                         setOnMouseClicked {
                                             //println("$entry clicked")
                                             openInDefaultTextEditor(entry.file)
-                                    }
-                                }))
+                                        }
+                                    }).also{DragResizerXY.makeResizable(it)})
                             }
                         }
                     })
                 })
             })
         }
-
-        primaryStage.title = board.name+" - Kotban"
-        primaryStage.scene = Scene(root, 600.0, 600.0)
-        primaryStage.show()
+        return columns
     }
 }
