@@ -1,6 +1,7 @@
 package com.github.medavox.kotban
 
 import java.io.File
+import java.awt.Desktop
 
 object Loader {
     fun load(dir: File):Board {
@@ -22,7 +23,7 @@ object Loader {
             //println("stuff in '$it': ${Arrays.toString(it.listFiles())}")
             subdir.name to (subdir.listFiles() ?: arrayOf()).filter {file:File ->
                 //println("file in $subdir: $file")
-                //filter out non-files, without the right extensions, unreadables, nonexistent, and files >10MB
+                //filter out non-files, unreadables, nonexistent, >10MB, without the right extensions
                 file.isFile && file.canRead() && file.exists() && file.length() < (10240 * 1024) &&
                         (file.name.endsWith(".md") || file.name.endsWith(".txt") )
             }.associateWith { foil ->
@@ -33,7 +34,7 @@ object Loader {
                 println("encoding of $file: $encoding")
                 encoding != null
             }.map { (file, charset) ->
-                Item(title = file.name, contents = file.readText())
+                Item(file = file, title = file.name, contents = file.readText())
             }
         }.filter { it.value.isNotEmpty() }
         println("panes: $subDirsAndTheirItems")
@@ -43,4 +44,18 @@ object Loader {
 
 data class Board(val name:String, val panes:Map<String,List<Item>>)
 
-data class Item(val title:String, val contents:String)
+data class Item(val file:File, val title:String, val contents:String)
+
+fun openInDefaultTextEditor(file:File) {
+    val isValid = file.isFile && file.canRead() && file.exists() && file.length() < (10240 * 1024)
+    if(!isValid) {
+        System.err.println("invalid file for text editing: $file")
+        return
+    }
+    if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+        val cmd = "rundll32 url.dll,FileProtocolHandler " + file.canonicalPath
+        Runtime.getRuntime().exec(cmd)
+    } else {
+        Desktop.getDesktop().edit(file)
+    }
+}

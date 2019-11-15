@@ -1,7 +1,6 @@
 package com.github.medavox.kotban
 
 import javafx.application.Application
-import javafx.geometry.Orientation
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.layout.AnchorPane
@@ -9,7 +8,6 @@ import javafx.scene.layout.HBox
 import javafx.stage.Stage
 import java.io.File
 import javafx.scene.layout.VBox
-import tornadofx.fitToHeight
 
 //terminology:
 //board: the whole thing. A folder with subfolders that each contain 0 or more text files
@@ -22,6 +20,9 @@ import tornadofx.fitToHeight
 // need to be able to drag notes between columns,
 // create and delete notes,
 // create and delete columns
+// click-to-maximise a single note
+// tags - supported through a custom line in the note's text
+// filter by tag
 /**Provides a Desktop GUI for the library.
  * Implemented with JavaFX, available as part of Java 8's language API.
  * Note that after Java 8, JavaFX was made an external library.
@@ -54,6 +55,7 @@ class Gui : Application() {
                 col.children.add(Label(name))
                 col.children.add(AnchorPane().also { anch ->
                     anch.children.add(ScrollPane().also { scrol ->
+                        scrol.prefViewportWidth = 300.0
                         scrol.isFitToWidth = true
                         AnchorPane.setTopAnchor(scrol, 0.0)
                         AnchorPane.setBottomAnchor(scrol, 0.0)
@@ -62,7 +64,13 @@ class Gui : Application() {
                         scrol.content = VBox().also { notes ->
                             for (entry in entries) {
                                 notes.children.add(TitledPane(entry.title,
-                                    TextArea(entry.contents).apply{isEditable=false}))
+                                    TextArea(entry.contents).apply{
+                                        isEditable=false
+                                        setOnMouseClicked {
+                                            //println("$entry clicked")
+                                            openInDefaultTextEditor(entry.file)
+                                    }
+                                }))
                             }
                         }
                     })
