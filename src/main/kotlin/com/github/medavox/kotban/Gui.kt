@@ -9,6 +9,8 @@ import javafx.stage.Stage
 import java.io.File
 import javafx.scene.layout.VBox
 import javafx.scene.control.ButtonBar
+import tornadofx.onDoubleClick
+import tornadofx.onRightClick
 
 //terminology:
 //board: the whole thing. A folder with subfolders that each contain 0 or more text files
@@ -77,7 +79,7 @@ class Gui : Application() {
         val columns = HBox()
         for((name, entries) in board.columns) {
             columns.children.add(VBox().also { col ->
-                col.children.add(Label(name))
+                col.children.add(Label(name+" - "+entries.size))
                 col.children.add(AnchorPane().also { anch ->
                     anch.children.add(ScrollPane().also { scrol ->
                         scrol.prefViewportWidth = 300.0
@@ -90,12 +92,16 @@ class Gui : Application() {
                             for (entry in entries) {
                                 notes.children.add(TitledPane(entry.title,
                                     TextArea(entry.contents).apply{
+                                        setOnDragDetected  {
+                                            println("drag detected:$it")
+                                        }
                                         isEditable=false
-                                        setOnMouseClicked {
+                                        onDoubleClick {
                                             //println("$entry clicked")
                                             openInDefaultTextEditor(entry.file)
                                         }
-                                    }).also{DragResizerXY.makeResizable(it)})
+                                        DragResizerXY.makeResizable(this)
+                                    }))
                             }
                         }
                     })
