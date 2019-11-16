@@ -75,7 +75,7 @@ class Gui : Application() {
 
     private fun layitout(board:Board, stg:Stage):HBox {
         val columns = HBox()
-        for((name, entries) in board.panes) {
+        for((name, entries) in board.columns) {
             columns.children.add(VBox().also { col ->
                 col.children.add(Label(name))
                 col.children.add(AnchorPane().also { anch ->

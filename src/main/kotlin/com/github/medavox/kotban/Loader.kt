@@ -14,35 +14,27 @@ fun load(dir: File):Board {
 
     val dirsInDir:List<File> = dir.listFiles()?.filter { it?.isDirectory ?: false } ?: listOf<File>()
 
-
     if(dirsInDir.isEmpty()) {
         throw Exception("no bin subdirs in board dir. Exiting.")
     }
-    val subDirsAndTheirItems:Map<String, List<Item>> = dirsInDir.associate {subdir ->
+    val subDirsAndTheirItems:Map<String, List<Note>> = dirsInDir.associate { subdir ->
         //println("stuff in '$it': ${Arrays.toString(it.listFiles())}")
         subdir.name to (subdir.listFiles() ?: arrayOf()).filter {file:File ->
             //println("file in $subdir: $file")
             //filter out non-files, unreadables, nonexistent, >10MB, without the right extensions
             file.isFile && file.canRead() && file.exists() && file.length() < (10240 * 1024) &&
                     (file.name.endsWith(".md") || file.name.endsWith(".txt") )
-        }.associateWith { foil ->
-            //detect charsets
-            CharsetDetector.detectCharset(foil)
-        }.filter { (file, encoding) ->
-            //filter out files with undetected charsets, ie non-text files
-            println("encoding of $file: $encoding")
-            encoding != null
-        }.map { (file, charset) ->
-            Item(file = file, title = file.name, contents = file.readText())
+        }.map { file ->
+            Note(file = file, title = file.name, contents = file.readText())
         }
     }.filter { it.value.isNotEmpty() }
-    println("panes: $subDirsAndTheirItems")
-    return Board(name=dir.name, panes=subDirsAndTheirItems)
+    //println("panes: $subDirsAndTheirItems")
+    return Board(name=dir.name, columns=subDirsAndTheirItems)
 }
 
-data class Board(val name:String, val panes:Map<String,List<Item>>)
+data class Board(val name:String, val columns:Map<String,List<Note>>)
 
-data class Item(val file:File, val title:String, val contents:String)
+data class Note(val file:File, val title:String, val contents:String)
 
 fun openInDefaultTextEditor(file:File) {
     val isValid = file.isFile && file.canRead() && file.exists() && file.length() < (10240 * 1024)
