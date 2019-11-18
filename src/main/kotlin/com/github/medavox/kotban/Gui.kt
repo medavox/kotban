@@ -100,7 +100,7 @@ class Gui : Application() {
                                             //println("$entry clicked")
                                             openInDefaultTextEditor(entry.file)
                                         }
-                                        DragResizerXY.makeResizable(this)
+                                        DragResizerXY(this).makeResizable()
                                     }))
                             }
                         }
