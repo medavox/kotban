@@ -78,9 +78,9 @@ class Gui : Application() {
 
     private fun layitout(board:Board):HBox {
         val columns = HBox()
-        for((name, entries) in board.columns) {
+        for(column in board.columns) {
             columns.children.add(VBox().also { col ->
-                col.children.add(Label(name+" - "+entries.size))
+                col.children.add(Label(column.name+" - "+column.notes.size))
                 col.children.add(AnchorPane().also { anch ->
                     anch.children.add(ScrollPane().also { scrol ->
                         scrol.prefViewportWidth = 300.0
