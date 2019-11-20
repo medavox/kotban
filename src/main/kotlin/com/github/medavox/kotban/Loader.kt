@@ -17,22 +17,24 @@ fun load(dir: File):Board {
     if(dirsInDir.isEmpty()) {
         throw Exception("no bin subdirs in board dir. Exiting.")
     }
-    val subDirsAndTheirItems:Map<String, List<Note>> = dirsInDir.associate { subdir ->
+    val subDirsWithTheirNotes:List<Column> = dirsInDir.map { subdir ->
         //println("stuff in '$it': ${Arrays.toString(it.listFiles())}")
-        subdir.name to (subdir.listFiles() ?: arrayOf()).filter {file:File ->
+        Column(subdir.name, subdir, (subdir.listFiles() ?: arrayOf()).filter {file:File ->
             //println("file in $subdir: $file")
             //filter out non-files, unreadables, nonexistent, >10MB, without the right extensions
             file.isFile && file.canRead() && file.exists() && file.length() < (10240 * 1024) &&
                     (file.name.endsWith(".md") || file.name.endsWith(".txt") )
         }.map { file ->
             Note(file = file, title = file.name, contents = file.readText())
-        }
-    }.filter { it.value.isNotEmpty() }
+        })
+    }.filter { it.notes.isNotEmpty() }
     //println("panes: $subDirsAndTheirItems")
-    return Board(name=dir.name, columns=subDirsAndTheirItems)
+    return Board(name=dir.name, columns=subDirsWithTheirNotes)
 }
 
-data class Board(val name:String, val columns:Map<String,List<Note>>)
+data class Board(val name:String, val columns:List<Column>)
+
+data class Column(val name:String, val folder:File, val notes:List<Note>)
 
 data class Note(val file:File, val title:String, val contents:String)
 
