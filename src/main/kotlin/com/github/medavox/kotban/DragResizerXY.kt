@@ -38,9 +38,7 @@ class DragResizerXY(private val region:Region) {
 	fun makeResizable() {
 		region.setOnMousePressed { event ->
 			// ignore clicks outside of the draggable margin
-			if (!isInDraggableZone(event)) {
-				Unit
-			}
+			if (!isInDraggableZone(event)) { Unit }
 
 			dragging = true
 
@@ -62,40 +60,25 @@ class DragResizerXY(private val region:Region) {
 			x = event.x
 		}
 		region.setOnMouseDragged { event ->
-			if (!dragging) {
-				Unit
-			}
+			if (!dragging) { Unit }
 
 			if (draggableZoneY) {
-				val mousey = event.y
-
-				val newHeight = region.minHeight + (mousey - y)
-
-				region.minHeight = newHeight
-
-				y = mousey
+				region.minHeight = region.minHeight + (event.y - y)
+				y = event.y
 			}
 
 			if (draggableZoneX) {
-				val mousex = event.x
-				val newWidth = region.minWidth + (mousex - x)
-				region.minWidth = newWidth
-				x = mousex
+				region.minWidth = region.minWidth + (event.x - x)
+				x = event.x
 			}
 		}
 		region.setOnMouseMoved { event ->
 			if (isInDraggableZone(event) || dragging) {
-				if (draggableZoneY) {
-					region.cursor = Cursor.S_RESIZE
-				}
+				if (draggableZoneY) { region.cursor = Cursor.S_RESIZE }
 
-				if (draggableZoneX) {
-					region.cursor = Cursor.E_RESIZE
-				}
+				if (draggableZoneX) { region.cursor = Cursor.E_RESIZE }
 
-			} else {
-				region.cursor = Cursor.DEFAULT
-			}
+			} else { region.cursor = Cursor.DEFAULT }
 		}
 		region.setOnMouseReleased {
 			dragging = false
