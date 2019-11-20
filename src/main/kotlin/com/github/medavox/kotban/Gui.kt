@@ -1,6 +1,7 @@
 package com.github.medavox.kotban
 
 import javafx.application.Application
+import javafx.event.EventHandler
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.layout.AnchorPane
@@ -9,8 +10,8 @@ import javafx.stage.Stage
 import java.io.File
 import javafx.scene.layout.VBox
 import javafx.scene.control.ButtonBar
-import tornadofx.onDoubleClick
-import tornadofx.onRightClick
+import javafx.scene.input.ClipboardContent
+import javafx.scene.input.TransferMode
 
 //terminology:
 //board: the whole thing. A folder with subfolders that each contain 0 or more text files
