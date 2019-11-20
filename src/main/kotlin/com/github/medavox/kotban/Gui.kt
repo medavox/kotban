@@ -89,20 +89,59 @@ class Gui : Application() {
                         AnchorPane.setBottomAnchor(scrol, 0.0)
                         AnchorPane.setLeftAnchor(scrol, 0.0)
                         AnchorPane.setRightAnchor(scrol, 0.0)
-                        scrol.content = VBox().also { notes ->
-                            for (entry in entries) {
-                                notes.children.add(TitledPane(entry.title,
-                                    TextArea(entry.contents).apply{
-                                        setOnDragDetected  {
-                                            println("drag detected:$it")
-                                        }
+                        scrol.content = VBox().apply {
+                            onDragOver = EventHandler { event ->
+                                /* accept only if it's not dragged from the same node,
+                                     * and if it has a File as data */
+                                if (event.gestureSource !== this && event.dragboard.hasFiles()) {
+                                    //println("$this: drag over: $event")
+                                    event.acceptTransferModes(*TransferMode.COPY_OR_MOVE)
+                                }
+                                event.consume()
+                            }
+
+                            onDragDropped = EventHandler { event ->
+                                /* data dropped */
+                                println("$this: onDragDropped: $event")
+                                /* if there is a string data on dragboard, read it and use it */
+                                val db = event.dragboard
+                                var success = false
+                                if (db.hasFiles()) {
+                                    println("files: ${db.files}")
+                                    success = true
+                                }
+                                /* let the source know whether the string was successfully
+                                     * transferred and used */
+                                event.isDropCompleted = success
+
+                                event.consume()
+                            }
+                        }.also { notes ->
+                            for (note in column.notes) {
+                                notes.children.add(TitledPane(note.title,
+                                    TextArea(note.contents).apply{
                                         isEditable=false
-                                        onDoubleClick {
-                                            //println("$entry clicked")
-                                            openInDefaultTextEditor(entry.file)
-                                        }
                                         DragResizerXY(this).makeResizable()
-                                    }))
+                                    }).apply {
+                                    setOnMouseClicked {
+                                        if(it.clickCount == 2) openInDefaultTextEditor(note.file)
+                                    }
+                                    setOnDragDone { println("$this: drag done:$it") }
+                                    setOnDragEntered { println("$this: drag entered:$it") }
+                                    setOnDragExited { println("$this: drag exited:$it") }
+                                    //setOnDragDropped { println("drag dropped:$it") }
+                                    onDragDetected = EventHandler {event ->
+                                        //println("drag detected:$it")
+                                        val dragBoard = this.startDragAndDrop(TransferMode.MOVE)
+                                        println("dragBoard:$dragBoard")
+                                        //put a file on the dragboard
+                                        val content = ClipboardContent()
+                                        content.putFiles(listOf(note.file))
+                                        dragBoard.setContent(content)
+
+                                        event.consume()
+                                    }
+                                })
                             }
                         }
                     })
