@@ -3,6 +3,12 @@ package com.github.medavox.kotban
 import java.io.File
 import java.awt.Desktop
 
+/**
+ * The margin around the control that a user can click in to start resizing
+ * the region.
+ */
+const val RESIZE_MARGIN = 10
+
 fun load(dir: File):Board {
     if(!dir.isDirectory) {
         throw Exception("supplied argument must be a directory")

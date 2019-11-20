@@ -6,12 +6,6 @@ import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Region
 
 /**
- * The margin around the control that a user can click in to start resizing
- * the region.
- */
-private const val RESIZE_MARGIN = 10
-
-/**
  * {@link DragResizerXY} can be used to add mouse listeners to a {@link Region}
  * and make it resizable by the user by clicking and dragging the border in the
  * same way as a window.
