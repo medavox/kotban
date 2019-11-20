@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'com.github'
-version '0.1'
+version '0.2'
 
 sourceCompatibility = 1.8
 
@@ -47,6 +47,6 @@ shadowJar {
     manifest {
         //attributes["Implementation-Title"] = "Gradle Jar File Example"
         attributes["Implementation-Version"] = version
-        attributes["Main-Class"] = "FakeMainKt"
+        attributes["Main-Class"] = "com.github.medavox.kotban.Launcher"
     }
 }
