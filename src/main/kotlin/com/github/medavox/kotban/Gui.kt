@@ -56,7 +56,7 @@ class Gui : Application() {
             //bar.nodeOrientation = NodeOrientation.LEFT_TO_RIGHT
             //bar.ali
             bar.buttons.add(
-                Button("Rifrash").apply{
+                Button("Refresh").apply{
                     setOnMouseClicked {
                         val board = load(File("./testboard"))
                         primaryStage.title = board.name+" - Kotban"
