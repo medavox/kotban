@@ -47,7 +47,7 @@ class Gui : Application() {
             isFitToHeight = true
             val board = load(File("./testboard"))
             primaryStage.title = board.name+" - Kotban"
-            content = layitout(board, primaryStage)
+            content = layitout(board)
         }
         val content = AnchorPane()
         content.children.add(colScrol)
@@ -60,7 +60,7 @@ class Gui : Application() {
                     setOnMouseClicked {
                         val board = load(File("./testboard"))
                         primaryStage.title = board.name+" - Kotban"
-                        colScrol.content = layitout(board, primaryStage)
+                        colScrol.content = layitout(board)
                     }
                 }
             )
@@ -69,13 +69,13 @@ class Gui : Application() {
 
         //root.setPrefSize(600.0, 600.0)
 
-        layitout(load(File("./testboard")), primaryStage)
+        layitout(load(File("./testboard")))
 
         primaryStage.scene = Scene(root, 600.0, 600.0)
         primaryStage.show()
     }
 
-    private fun layitout(board:Board, stg:Stage):HBox {
+    private fun layitout(board:Board):HBox {
         val columns = HBox()
         for((name, entries) in board.columns) {
             columns.children.add(VBox().also { col ->
