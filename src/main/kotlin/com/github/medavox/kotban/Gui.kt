@@ -28,7 +28,6 @@ import javafx.scene.input.TransferMode
 // click-to-maximise a single note
 // tags - supported through a custom line in the note's text
 // filter by tag
-// show empty columns
 // show a visual hint about where the note will go
 // allow dragging to a specific placement in the column?
 //   goes against our "ordering is alphabetical only" approach
@@ -79,16 +78,17 @@ class Gui : Application() {
     }
 
 
-    private fun uiOf(note:Note): Node = TitledPane(note.title,
-        TextArea(note.contents).apply{
+    private fun uiOf(note:Note): Node = TitledPane().apply {
+        text = note.title
+        content = TextArea(note.contents).apply{
             isEditable=false
             DragResizerXY(this).makeResizable()
-        }).apply {
+        }
         contextMenu = ContextMenu(
             MenuItem("Open in editor").apply{setOnAction{
                 openInDefaultTextEditor(note.file)
             }},
-            MenuItem("Rename").apply {setOnAction {
+            MenuItem("Rename").apply {setOnAction{
                 this.text
             }}
         )
