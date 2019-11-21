@@ -54,7 +54,7 @@ class Gui : Application() {
             isFitToHeight = true
             val board = load(dirFile)
             primaryStage.title = board.name+" - Kotban"
-            content = layoutColumnContents(board)
+            content = layoutColumnContents(board.columns)
         }
         val content = AnchorPane()
         content.children.add(colScrol)
@@ -67,7 +67,7 @@ class Gui : Application() {
                     setOnMouseClicked {
                         val board = load(dirFile)
                         primaryStage.title = board.name+" - Kotban"
-                        colScrol.content = layoutColumnContents(board)
+                        colScrol.content = layoutColumnContents(board.columns)
                     }
                 }
             )
@@ -157,15 +157,12 @@ class Gui : Application() {
             })
         })
     }
-    /*private fun column(title:String, vararg ):VBox {
 
-    }
-*/
-    private fun layoutColumnContents(board:Board):HBox {
-        val columns = HBox()
-        for(column in board.columns) {
-            columns.children.add(uiOf(column))
+    private fun layoutColumnContents(columns:List<Column>):HBox {
+        val uiColumns = HBox()
+        for(column in columns) {
+            uiColumns.children.add(uiOf(column))
         }
-        return columns
+        return uiColumns
     }
 }
