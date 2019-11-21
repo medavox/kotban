@@ -2,6 +2,7 @@ package com.github.medavox.kotban
 
 import javafx.application.Application
 import javafx.event.EventHandler
+import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.layout.AnchorPane
@@ -37,10 +38,12 @@ import javafx.scene.input.TransferMode
  * Note that after Java 8, JavaFX was made an external library.
  * @see [https://docs.oracle.com/javase/8/javafx/api](JavaFX javadoc)*/
 class Gui : Application() {
+    private val dir = "./testboard"
     /*Instead of making entries editable (and effectively having to write our own text editor),
     * make each entry, upon being clicked, open itself in the user's choice of editor.
     * That allows us to focus on prettifying the Markdown */
     override fun start(primaryStage:Stage) {
+        val dirFile = File(dir)
         val root = VBox()
 
         val colScrol = ScrollPane().apply {
@@ -49,9 +52,9 @@ class Gui : Application() {
             AnchorPane.setLeftAnchor(this, 0.0)
             AnchorPane.setRightAnchor(this, 0.0)
             isFitToHeight = true
-            val board = load(File("./testboard"))
+            val board = load(dirFile)
             primaryStage.title = board.name+" - Kotban"
-            content = layitout(board)
+            content = layoutColumnContents(board)
         }
         val content = AnchorPane()
         content.children.add(colScrol)
