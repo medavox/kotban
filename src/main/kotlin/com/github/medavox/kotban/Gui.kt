@@ -127,24 +127,24 @@ class Gui : Application() {
                                         isEditable=false
                                         DragResizerXY(this).makeResizable()
                                     }).apply {
-                                    setOnMouseClicked {
-                                        if(it.clickCount == 2) openInDefaultTextEditor(note.file)
-                                    }
-                                    setOnDragDone { println("$this: drag done:$it") }
-                                    setOnDragEntered { println("$this: drag entered:$it") }
-                                    setOnDragExited { println("$this: drag exited:$it") }
-                                    //setOnDragDropped { println("drag dropped:$it") }
-                                    onDragDetected = EventHandler {event ->
-                                        //println("drag detected:$it")
-                                        val dragBoard = this.startDragAndDrop(TransferMode.MOVE)
-                                        println("dragBoard:$dragBoard")
-                                        //put a file on the dragboard
-                                        val content = ClipboardContent()
-                                        content.putFiles(listOf(note.file))
-                                        dragBoard.setContent(content)
+                                        setOnMouseClicked {
+                                            if(it.clickCount == 2) openInDefaultTextEditor(note.file)
+                                        }
+                                        setOnDragDone { println("$this: drag done:$it") }
+                                        setOnDragEntered { println("$this: drag entered:$it") }
+                                        setOnDragExited { println("$this: drag exited:$it") }
+                                        //setOnDragDropped { println("drag dropped:$it") }
+                                        onDragDetected = EventHandler {event ->
+                                            //println("drag detected:$it")
+                                            val dragBoard = this.startDragAndDrop(TransferMode.MOVE)
+                                            println("dragBoard:$dragBoard")
+                                            //put a file on the dragboard
+                                            val content = ClipboardContent()
+                                            content.putFiles(listOf(note.file))
+                                            dragBoard.setContent(content)
 
-                                        event.consume()
-                                    }
+                                            event.consume()
+                                        }
                                 })
                             }
                         }
