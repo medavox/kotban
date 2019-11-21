@@ -5,7 +5,6 @@ import javafx.event.EventHandler
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.*
-import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.HBox
 import javafx.stage.Stage
 import java.io.File
@@ -47,17 +46,13 @@ class Gui : Application() {
         val root = VBox()
 
         val colScrol = ScrollPane().apply {
-            AnchorPane.setTopAnchor(this, 0.0)
-            AnchorPane.setBottomAnchor(this, 0.0)
-            AnchorPane.setLeftAnchor(this, 0.0)
-            AnchorPane.setRightAnchor(this, 0.0)
+            prefViewportHeightProperty().bind(root.heightProperty())
+            prefViewportWidthProperty().bind(root.widthProperty())
             isFitToHeight = true
             val board = load(dirFile)
             primaryStage.title = board.name+" - Kotban"
             content = layoutColumnContents(board.columns)
         }
-        val content = AnchorPane()
-        content.children.add(colScrol)
 
         root.children.add(ButtonBar().also{ bar ->
             //bar.nodeOrientation = NodeOrientation.LEFT_TO_RIGHT
@@ -72,8 +67,8 @@ class Gui : Application() {
                 }
             )
         })
-        root.children.add(content)
-        content.prefHeightProperty().bind(root.heightProperty())
+        root.children.add(colScrol)
+        colScrol.prefHeightProperty().bind(root.heightProperty())
         //content.minHeightProperty().bind(root.heightProperty())
 
         primaryStage.scene = Scene(root, 600.0, 600.0)
@@ -113,48 +108,43 @@ class Gui : Application() {
 
     private fun uiOf(column:Column):Node = VBox().also { col ->
         col.children.add(Label(column.name+" - "+column.notes.size))
-        col.children.add(AnchorPane().also { anch ->
-            anch.children.add(ScrollPane().also { scrol ->
-                scrol.prefViewportWidth = 300.0
-                scrol.isFitToWidth = true
-                AnchorPane.setTopAnchor(scrol, 0.0)
-                AnchorPane.setBottomAnchor(scrol, 0.0)
-                AnchorPane.setLeftAnchor(scrol, 0.0)
-                AnchorPane.setRightAnchor(scrol, 0.0)
-                scrol.content = VBox().apply {
-                    onDragOver = EventHandler { event ->
-                        /* accept only if it's not dragged from the same node,
-                             * and if it has a File as data */
-                        if (event.gestureSource !== this && event.dragboard.hasFiles()) {
-                            //println("$this: drag over: $event")
-                            event.acceptTransferModes(*TransferMode.COPY_OR_MOVE)
-                        }
-                        event.consume()
+        col.children.add(ScrollPane().also { scrol ->
+            scrol.prefViewportWidth = 300.0
+            scrol.prefViewportHeightProperty().bind(col.heightProperty())
+            scrol.isFitToWidth = true
+            scrol.content = VBox().apply {
+                onDragOver = EventHandler { event ->
+                    /* accept only if it's not dragged from the same node,
+                         * and if it has a File as data */
+                    if (event.gestureSource !== this && event.dragboard.hasFiles()) {
+                        //println("$this: drag over: $event")
+                        event.acceptTransferModes(*TransferMode.COPY_OR_MOVE)
                     }
-
-                    onDragDropped = EventHandler { event ->
-                        /* data dropped */
-                        println("$this: onDragDropped: $event")
-                        /* if there is a string data on dragboard, read it and use it */
-                        val db = event.dragboard
-                        var success = false
-                        if (db.hasFiles()) {
-                            println("files: ${db.files}")
-                            db.files[0].renameTo(File(column.folder, db.files[0].name))
-                            success = true
-                            //layitout(load(dirFile))//todo: figure out how to do UI refresh here
-                        }
-                        /* let the source know whether the string was successfully
-                             * transferred and used */
-                        event.isDropCompleted = success
-
-                        event.consume()
-                    }
-                    for (note in column.notes) {
-                        children.add(uiOf(note))
-                    }
+                    event.consume()
                 }
-            })
+
+                onDragDropped = EventHandler { event ->
+                    /* data dropped */
+                    println("$this: onDragDropped: $event")
+                    /* if there is a string data on dragboard, read it and use it */
+                    val db = event.dragboard
+                    var success = false
+                    if (db.hasFiles()) {
+                        println("files: ${db.files}")
+                        db.files[0].renameTo(File(column.folder, db.files[0].name))
+                        success = true
+                        //layitout(load(dirFile))//todo: figure out how to do UI refresh here
+                    }
+                    /* let the source know whether the string was successfully
+                         * transferred and used */
+                    event.isDropCompleted = success
+
+                    event.consume()
+                }
+                for (note in column.notes) {
+                    children.add(uiOf(note))
+                }
+            }
         })
     }
 
