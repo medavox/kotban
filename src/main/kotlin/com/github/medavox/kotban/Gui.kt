@@ -65,95 +65,104 @@ class Gui : Application() {
             bar.buttons.add(
                 Button("Refresh").apply{
                     setOnMouseClicked {
-                        val board = load(File("./testboard"))
+                        val board = load(dirFile)
                         primaryStage.title = board.name+" - Kotban"
-                        colScrol.content = layitout(board)
+                        colScrol.content = layoutColumnContents(board)
                     }
                 }
             )
         })
         root.children.add(content)
 
-        //root.setPrefSize(600.0, 600.0)
-
-        layitout(load(File("./testboard")))
-
         primaryStage.scene = Scene(root, 600.0, 600.0)
         primaryStage.show()
     }
 
-    private fun layitout(board:Board):HBox {
+
+    private fun uiOf(note:Note): Node = TitledPane(note.title,
+        TextArea(note.contents).apply{
+            isEditable=false
+            DragResizerXY(this).makeResizable()
+        }).apply {
+        contextMenu = ContextMenu(
+            MenuItem("Open in editor").apply{setOnAction{
+                openInDefaultTextEditor(note.file)
+            }},
+            MenuItem("Rename").apply {setOnAction {
+                this.text
+            }}
+        )
+        setOnDragDone { println("$this: drag done:$it") }
+        setOnDragEntered { println("$this: drag entered:$it") }
+        setOnDragExited { println("$this: drag exited:$it") }
+        //setOnDragDropped { println("drag dropped:$it") }
+        onDragDetected = EventHandler {event ->
+            //println("drag detected:$it")
+            val dragBoard = this.startDragAndDrop(TransferMode.MOVE)
+            println("dragBoard:$dragBoard")
+            //put a file on the dragboard
+            val content = ClipboardContent()
+            content.putFiles(listOf(note.file))
+            dragBoard.setContent(content)
+
+            event.consume()
+        }
+    }
+
+    private fun uiOf(column:Column):Node = VBox().also { col ->
+        col.children.add(Label(column.name+" - "+column.notes.size))
+        col.children.add(AnchorPane().also { anch ->
+            anch.children.add(ScrollPane().also { scrol ->
+                scrol.prefViewportWidth = 300.0
+                scrol.isFitToWidth = true
+                AnchorPane.setTopAnchor(scrol, 0.0)
+                AnchorPane.setBottomAnchor(scrol, 0.0)
+                AnchorPane.setLeftAnchor(scrol, 0.0)
+                AnchorPane.setRightAnchor(scrol, 0.0)
+                scrol.content = VBox().apply {
+                    onDragOver = EventHandler { event ->
+                        /* accept only if it's not dragged from the same node,
+                             * and if it has a File as data */
+                        if (event.gestureSource !== this && event.dragboard.hasFiles()) {
+                            //println("$this: drag over: $event")
+                            event.acceptTransferModes(*TransferMode.COPY_OR_MOVE)
+                        }
+                        event.consume()
+                    }
+
+                    onDragDropped = EventHandler { event ->
+                        /* data dropped */
+                        println("$this: onDragDropped: $event")
+                        /* if there is a string data on dragboard, read it and use it */
+                        val db = event.dragboard
+                        var success = false
+                        if (db.hasFiles()) {
+                            println("files: ${db.files}")
+                            db.files[0].renameTo(File(column.folder, db.files[0].name))
+                            success = true
+                            //layitout(load(dirFile))//todo: figure out how to do UI refresh here
+                        }
+                        /* let the source know whether the string was successfully
+                             * transferred and used */
+                        event.isDropCompleted = success
+
+                        event.consume()
+                    }
+                    for (note in column.notes) {
+                        children.add(uiOf(note))
+                    }
+                }
+            })
+        })
+    }
+    /*private fun column(title:String, vararg ):VBox {
+
+    }
+*/
+    private fun layoutColumnContents(board:Board):HBox {
         val columns = HBox()
         for(column in board.columns) {
-            columns.children.add(VBox().also { col ->
-                col.children.add(Label(column.name+" - "+column.notes.size))
-                col.children.add(AnchorPane().also { anch ->
-                    anch.children.add(ScrollPane().also { scrol ->
-                        scrol.prefViewportWidth = 300.0
-                        scrol.isFitToWidth = true
-                        AnchorPane.setTopAnchor(scrol, 0.0)
-                        AnchorPane.setBottomAnchor(scrol, 0.0)
-                        AnchorPane.setLeftAnchor(scrol, 0.0)
-                        AnchorPane.setRightAnchor(scrol, 0.0)
-                        scrol.content = VBox().apply {
-                            onDragOver = EventHandler { event ->
-                                /* accept only if it's not dragged from the same node,
-                                     * and if it has a File as data */
-                                if (event.gestureSource !== this && event.dragboard.hasFiles()) {
-                                    //println("$this: drag over: $event")
-                                    event.acceptTransferModes(*TransferMode.COPY_OR_MOVE)
-                                }
-                                event.consume()
-                            }
-
-                            onDragDropped = EventHandler { event ->
-                                /* data dropped */
-                                println("$this: onDragDropped: $event")
-                                /* if there is a string data on dragboard, read it and use it */
-                                val db = event.dragboard
-                                var success = false
-                                if (db.hasFiles()) {
-                                    println("files: ${db.files}")
-                                    db.files[0].renameTo(File(column.folder, db.files[0].name))
-                                    success = true
-                                }
-                                /* let the source know whether the string was successfully
-                                     * transferred and used */
-                                event.isDropCompleted = success
-
-                                event.consume()
-                            }
-                        }.also { notes ->
-                            for (note in column.notes) {
-                                notes.children.add(TitledPane(note.title,
-                                    TextArea(note.contents).apply{
-                                        isEditable=false
-                                        DragResizerXY(this).makeResizable()
-                                    }).apply {
-                                        setOnMouseClicked {
-                                            if(it.clickCount == 2) openInDefaultTextEditor(note.file)
-                                        }
-                                        setOnDragDone { println("$this: drag done:$it") }
-                                        setOnDragEntered { println("$this: drag entered:$it") }
-                                        setOnDragExited { println("$this: drag exited:$it") }
-                                        //setOnDragDropped { println("drag dropped:$it") }
-                                        onDragDetected = EventHandler {event ->
-                                            //println("drag detected:$it")
-                                            val dragBoard = this.startDragAndDrop(TransferMode.MOVE)
-                                            println("dragBoard:$dragBoard")
-                                            //put a file on the dragboard
-                                            val content = ClipboardContent()
-                                            content.putFiles(listOf(note.file))
-                                            dragBoard.setContent(content)
-
-                                            event.consume()
-                                        }
-                                })
-                            }
-                        }
-                    })
-                })
-            })
+            columns.children.add(uiOf(column))
         }
         return columns
     }
