@@ -19,16 +19,19 @@ import javafx.scene.input.TransferMode
 //note: a task. can be moved between columns. represented on-disk by a text file
 
 //todo:
-// need a filer watcher, to auto-refresh external changes
-//   or just a refresh button
-// need to be able to drag notes between columns,
-// create and delete notes,
+// create and delete notes
 // create and delete columns
 // edit column names (which are actually folder names)
 // edit note names (which are actually file names)
 // click-to-maximise a single note
 // tags - supported through a custom line in the note's text
 // filter by tag
+// show empty columns
+// make column expand vertically,
+//   so you can drag onto empty space below a column's notes, as expected
+// show a visual hint about where the note will go
+// allow dragging to a specific placement in the column?
+//   goes against our "ordering is alphabetical only" approach
 /**Provides a Desktop GUI for the library.
  * Implemented with JavaFX, available as part of Java 8's language API.
  * Note that after Java 8, JavaFX was made an external library.
