@@ -33,7 +33,7 @@ fun load(dir: File):Board {
         }.map { file ->
             Note(file = file, title = file.name, contents = file.readText())
         })
-    }.filter { it.notes.isNotEmpty() }
+    }
     //println("panes: $subDirsAndTheirItems")
     return Board(name=dir.name, columns=subDirsWithTheirNotes)
 }
