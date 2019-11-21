@@ -73,6 +73,8 @@ class Gui : Application() {
             )
         })
         root.children.add(content)
+        content.prefHeightProperty().bind(root.heightProperty())
+        //content.minHeightProperty().bind(root.heightProperty())
 
         primaryStage.scene = Scene(root, 600.0, 600.0)
         primaryStage.show()
