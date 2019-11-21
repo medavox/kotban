@@ -108,6 +108,7 @@ class Gui : Application() {
                                 var success = false
                                 if (db.hasFiles()) {
                                     println("files: ${db.files}")
+                                    db.files[0].renameTo(File(column.folder, db.files[0].name))
                                     success = true
                                 }
                                 /* let the source know whether the string was successfully
