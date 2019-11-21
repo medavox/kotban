@@ -19,6 +19,8 @@ import javafx.scene.input.TransferMode
 //note: a task. can be moved between columns. represented on-disk by a text file
 
 //todo:
+// line numbers in note contents
+// line wrapping in notes
 // create and delete notes
 // create and delete columns
 // edit column names (which are actually folder names)
@@ -27,8 +29,6 @@ import javafx.scene.input.TransferMode
 // tags - supported through a custom line in the note's text
 // filter by tag
 // show empty columns
-// make column expand vertically,
-//   so you can drag onto empty space below a column's notes, as expected
 // show a visual hint about where the note will go
 // allow dragging to a specific placement in the column?
 //   goes against our "ordering is alphabetical only" approach
@@ -38,14 +38,16 @@ import javafx.scene.input.TransferMode
  * @see [https://docs.oracle.com/javase/8/javafx/api](JavaFX javadoc)*/
 class Gui : Application() {
     private val dir = "./testboard"
+    val dirFile = File(dir)
+    private lateinit var contentContainer: ScrollPane
     /*Instead of making entries editable (and effectively having to write our own text editor),
     * make each entry, upon being clicked, open itself in the user's choice of editor.
     * That allows us to focus on prettifying the Markdown */
     override fun start(primaryStage:Stage) {
-        val dirFile = File(dir)
         val root = VBox()
 
         val colScrol = ScrollPane().apply {
+            contentContainer = this
             prefViewportHeightProperty().bind(root.heightProperty())
             prefViewportWidthProperty().bind(root.widthProperty())
             isFitToHeight = true
@@ -68,9 +70,10 @@ class Gui : Application() {
             )
         })
         root.children.add(colScrol)
-        colScrol.prefHeightProperty().bind(root.heightProperty())
+        //colScrol.prefHeightProperty().bind(root.heightProperty())
         //content.minHeightProperty().bind(root.heightProperty())
 
+        //primaryStage.scene.root
         primaryStage.scene = Scene(root, 600.0, 600.0)
         primaryStage.show()
     }
@@ -106,13 +109,13 @@ class Gui : Application() {
         }
     }
 
-    private fun uiOf(column:Column):Node = VBox().also { col ->
-        col.children.add(Label(column.name+" - "+column.notes.size))
-        col.children.add(ScrollPane().also { scrol ->
-            scrol.prefViewportWidth = 300.0
-            scrol.prefViewportHeightProperty().bind(col.heightProperty())
-            scrol.isFitToWidth = true
-            scrol.content = VBox().apply {
+    private fun uiOf(column:Column):Node = VBox().also { colContainer ->
+        colContainer.children.add(Label(column.name+" - "+column.notes.size))
+        colContainer.children.add(ScrollPane().also { notesScrollPane ->
+            notesScrollPane.prefViewportWidth = 300.0
+            notesScrollPane.isFitToWidth = true
+            notesScrollPane.content = VBox().apply {
+                prefHeightProperty().bind(contentContainer.heightProperty())
                 onDragOver = EventHandler { event ->
                     /* accept only if it's not dragged from the same node,
                          * and if it has a File as data */
@@ -133,7 +136,7 @@ class Gui : Application() {
                         println("files: ${db.files}")
                         db.files[0].renameTo(File(column.folder, db.files[0].name))
                         success = true
-                        //layitout(load(dirFile))//todo: figure out how to do UI refresh here
+                        contentContainer.content = layoutColumnContents(load(dirFile).columns)//todo: figure out how to do UI refresh here
                     }
                     /* let the source know whether the string was successfully
                          * transferred and used */
