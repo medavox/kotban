@@ -144,14 +144,6 @@ class Gui : Application() {
                         it.createNewFile()
                         contentContainer.content = layoutColumnContents(load(dirFile).columns)
                     }
-                }},
-                Button("Rename Column").apply{setOnAction {
-                    promptForFileName(true, dirFile,
-                        "Rename column \'${column.name}\' to:", column.name
-                    )?.let {
-                        column.folder.renameTo(it)
-                        contentContainer.content = layoutColumnContents(load(dirFile).columns)
-                    }
                 }})
             })
         })
@@ -191,6 +183,17 @@ class Gui : Application() {
                 }
             }
         })
+        val contextMenu = ContextMenu(MenuItem("Rename Column").apply{setOnAction{
+            promptForFileName(true, dirFile,
+                "Rename column \'${column.name}\' to:", column.name
+            )?.let {
+                column.folder.renameTo(it)
+                contentContainer.content = layoutColumnContents(load(dirFile).columns)
+            }
+        }})
+        colContainer.onContextMenuRequested = EventHandler {
+            contextMenu.show(colContainer, it.screenX, it.screenY)
+        }
     }
 
     private fun layoutColumnContents(columns:List<Column>):HBox {
