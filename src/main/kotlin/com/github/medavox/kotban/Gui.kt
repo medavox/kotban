@@ -16,6 +16,9 @@ import javafx.scene.input.TransferMode
 //todo:
 // line numbers in note contents
 // line wrapping in notes
+// expand note textarea to fit number of lines,
+//   instead of keeping height and adding another vertical scrollbar
+// (fix) vertical scrollbars on columns that aren't tall enough to need them
 // delete notes
 // delete columns
 // click-to-maximise a single note
@@ -24,10 +27,11 @@ import javafx.scene.input.TransferMode
 // wrap long column names
 // show a visual hint about where the note will go
 // monospace font?
+// togglable MarkDown preview for .md files
 // allow dragging to a specific placement in the column?
 //   goes against our "ordering is alphabetical only" approach
 // when dragging a note, auto-scroll when the mouse is near the window's edge
-// user chooses kanban directory
+// user can choose kanban directory
 /**terminology:
  * board: the whole thing. A folder with subfolders that each contain 0 or more text files
  * column: contains notes/tasks. represented on-disk by a subfolder of the board
