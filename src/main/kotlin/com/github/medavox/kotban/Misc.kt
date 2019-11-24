@@ -9,6 +9,8 @@ import java.awt.Desktop
  */
 const val RESIZE_MARGIN = 10
 
+val PLAIN_TEXT_FILE_EXTENSIONS = arrayOf("txt", "md", "cfg", "ini", "config", "textile", "rst", "asc")
+
 fun load(dir: File):Board {
     if(!dir.isDirectory) {
         throw Exception("supplied argument must be a directory")
@@ -29,7 +31,7 @@ fun load(dir: File):Board {
             //println("file in $subdir: $file")
             //filter out non-files, unreadables, nonexistent, >10MB, without the right extensions
             file.isFile && file.canRead() && file.exists() && file.length() < (10240 * 1024) &&
-                    (file.name.endsWith(".md") || file.name.endsWith(".txt") )
+                    file.extension in PLAIN_TEXT_FILE_EXTENSIONS
         }.map { file ->
             Note(file = file, title = file.name, contents = file.readText())
         })
