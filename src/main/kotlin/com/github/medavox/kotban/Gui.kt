@@ -13,11 +13,6 @@ import javafx.scene.control.ButtonBar
 import javafx.scene.input.ClipboardContent
 import javafx.scene.input.TransferMode
 
-//terminology:
-//board: the whole thing. A folder with subfolders that each contain 0 or more text files
-//column: contains notes/tasks. represented on-disk by a subfolder of the board
-//note: a task. can be moved between columns. represented on-disk by a text file
-
 //todo:
 // line numbers in note contents
 // line wrapping in notes
@@ -29,9 +24,14 @@ import javafx.scene.input.TransferMode
 // tags - supported through a custom line in the note's text
 // filter by tag
 // show a visual hint about where the note will go
+// monospace font?
 // allow dragging to a specific placement in the column?
 //   goes against our "ordering is alphabetical only" approach
-/**Provides a Desktop GUI for the library.
+// auto-scroll when dragging a note, and the mouse is near the window's edge
+/**terminology:
+ * board: the whole thing. A folder with subfolders that each contain 0 or more text files
+ * column: contains notes/tasks. represented on-disk by a subfolder of the board
+ * note: a task. can be moved between columns. represented on-disk by a text file
  * Implemented with JavaFX, available as part of Java 8's language API.
  * Note that after Java 8, JavaFX was made an external library.
  * @see [https://docs.oracle.com/javase/8/javafx/api](JavaFX javadoc)*/
