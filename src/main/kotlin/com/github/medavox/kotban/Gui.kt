@@ -92,7 +92,11 @@ class Gui : Application() {
             MenuItem("Rename").apply {setOnAction{
                 var isValid = true
                 do{
-                    val tid = TextInputDialog(note.file.name)
+                    val tid = TextInputDialog(note.file.name).apply {
+                        headerText  = "rename note file \n\'${note.file.name}\'"
+                        graphic = null
+                    }
+
                     val output:String = tid.showAndWait().orElse("")
 
                     if(output.isEmpty()) {//canceled
@@ -104,7 +108,9 @@ class Gui : Application() {
                     } else if(!PLAIN_TEXT_FILE_EXTENSIONS.any{output.endsWith(".$it")}) {
                         isValid = false
                         Alert(Alert.AlertType.ERROR,
-                            "filename must end in .md or .txt").showAndWait()
+                        PLAIN_TEXT_FILE_EXTENSIONS.fold("filename must end in a supported extension:\n"){
+                            acc, elem -> "$acc .$elem"
+                        }).showAndWait()
                     }
                     else {
                         isValid = true
