@@ -20,8 +20,6 @@ import javafx.scene.input.TransferMode
 // expand note textarea to fit number of lines,
 //   instead of keeping height and adding another vertical scrollbar
 // (fix) vertical scrollbars on columns that aren't tall enough to need them
-// delete notes
-// delete columns
 // click-to-maximise a single note
 // tags - supported through a custom line in the note's text
 // filter by tag
@@ -98,14 +96,24 @@ class Gui : Application() {
             DragResizerXY(this).makeResizable()
         }
         contextMenu = ContextMenu(
-            MenuItem("Open in editor").apply{setOnAction{
+            MenuItem("Open note in editor").apply{setOnAction{
                 openInDefaultTextEditor(note.file)
             }},
-            MenuItem("Rename").apply {setOnAction{
+            MenuItem("Rename note").apply {setOnAction{
                 promptForFileName(false, note.file.parentFile,
                     "rename note file \n\'${note.file.name}\'", note.file.name
                 )?.let {
                     note.file.renameTo(it)
+                    contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                }
+            }},
+            MenuItem("Delete note").apply{setOnAction{
+                val confirmation = Alert(CONFIRMATION).apply {
+                    headerText = "delete this note \'${note.title}\'?"
+                    //dialogPane.
+                }.showAndWait()
+                if(confirmation.isPresent && confirmation.get() == ButtonType.OK) {
+                    note.file.delete()
                     contentContainer.content = layoutColumnContents(load(dirFile).columns)
                 }
             }}
