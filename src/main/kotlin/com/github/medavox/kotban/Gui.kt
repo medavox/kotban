@@ -89,7 +89,29 @@ class Gui : Application() {
                 openInDefaultTextEditor(note.file)
             }},
             MenuItem("Rename").apply {setOnAction{
-                this.text
+                var isValid = true
+                do{
+                    val tid = TextInputDialog(note.file.name)
+                    val output:String = tid.showAndWait().orElse("")
+
+                    if(output.isEmpty()) {//canceled
+                        isValid = true
+                    }else if(output.isBlank()) {
+                        isValid = false
+                        Alert(Alert.AlertType.ERROR,
+                            "filename must not be blank").showAndWait()
+                    } else if(!PLAIN_TEXT_FILE_EXTENSIONS.any{output.endsWith(".$it")}) {
+                        isValid = false
+                        Alert(Alert.AlertType.ERROR,
+                            "filename must end in .md or .txt").showAndWait()
+                    }
+                    else {
+                        isValid = true
+                        val escaped = output.replace(Regex("[^a-zA-Z0-9 _.-]"), "_")
+                        note.file.renameTo(File(note.file.parentFile, escaped))
+                        contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                    }
+                } while (!isValid)
             }}
         )
         setOnDragDone { println("$this: drag done:$it") }
