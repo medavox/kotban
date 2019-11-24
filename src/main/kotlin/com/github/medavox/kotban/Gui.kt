@@ -90,7 +90,7 @@ class Gui : Application() {
                 openInDefaultTextEditor(note.file)
             }},
             MenuItem("Rename").apply {setOnAction{
-                var isValid = true
+                var isValid: Boolean
                 do{
                     val tid = TextInputDialog(note.file.name).apply {
                         headerText  = "rename note file \n\'${note.file.name}\'"
@@ -149,7 +149,43 @@ class Gui : Application() {
                     //prefHeightProperty().bind()
                 },
             ButtonBar().also{ butts ->
-                butts.buttons.add(Button("New Note"))
+                butts.buttons.add(Button("New Note").apply {setOnAction {
+                    var isValid: Boolean
+                    do{
+                        val tid = TextInputDialog("new note.txt").apply {
+                            headerText  = "name of new note"
+                            graphic = null
+                        }
+
+                        val output:String = tid.showAndWait().orElse("")
+                        val escaped = output.replace(Regex("[^a-zA-Z0-9 _.-]"), "_")
+
+                        if(output.isEmpty()) {//canceled
+                            isValid = true
+                        }else if(output.isBlank()) {
+                            isValid = false
+                            Alert(Alert.AlertType.ERROR,
+                                "filename must not be blank").showAndWait()
+                        } else if(!PLAIN_TEXT_FILE_EXTENSIONS.any{escaped.endsWith(".$it")}) {
+                            isValid = false
+                            Alert(Alert.AlertType.ERROR,
+                                PLAIN_TEXT_FILE_EXTENSIONS.fold("filename must end in a supported extension:\n"){
+                                        acc, elem -> "$acc .$elem"
+                                }).showAndWait()
+                        }
+                        else if(File(column.folder, escaped).exists()) {
+                            isValid = false
+                            Alert(Alert.AlertType.ERROR,
+                                "File already exists").showAndWait()
+                        }
+                        else {
+                            isValid = true
+                            File(column.folder, escaped).createNewFile()
+                            //note.file.renameTo(File(note.file.parentFile, escaped))
+                            contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                        }
+                    } while (!isValid)
+                }})
             })
         })
         colContainer.children.add(ScrollPane().also { notesScrollPane ->
