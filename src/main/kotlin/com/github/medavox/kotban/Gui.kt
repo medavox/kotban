@@ -16,9 +16,8 @@ import javafx.scene.input.TransferMode
 //todo:
 // line numbers in note contents
 // line wrapping in notes
-// create and delete notes
-// create and delete columns
-// edit column names (which are actually folder names)
+// delete notes
+// delete columns
 // click-to-maximise a single note
 // tags - supported through a custom line in the note's text
 // filter by tag
@@ -56,17 +55,25 @@ class Gui : Application() {
             content = layoutColumnContents(board.columns)
         }
 
-        root.children.add(ButtonBar().also{ bar ->
+        root.children.add(ButtonBar().apply {
             //bar.nodeOrientation = NodeOrientation.LEFT_TO_RIGHT
             //bar.ali
-            bar.buttons.add(
+            buttons.addAll(
                 Button("Refresh").apply{
                     setOnMouseClicked {
                         val board = load(dirFile)
                         primaryStage.title = board.name+" - Kotban"
                         colScrol.content = layoutColumnContents(board.columns)
                     }
-                }
+                },
+                Button("New Column").apply{setOnAction {
+                    promptForFileName(true, dirFile,
+                        "Name of new column:", "New column"
+                    )?.let {
+                        it.mkdir()
+                        contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                    }
+                }}
             )
         })
         root.children.add(colScrol)
@@ -90,35 +97,12 @@ class Gui : Application() {
                 openInDefaultTextEditor(note.file)
             }},
             MenuItem("Rename").apply {setOnAction{
-                var isValid: Boolean
-                do{
-                    val tid = TextInputDialog(note.file.name).apply {
-                        headerText  = "rename note file \n\'${note.file.name}\'"
-                        graphic = null
-                    }
-
-                    val output:String = tid.showAndWait().orElse("")
-
-                    if(output.isEmpty()) {//canceled
-                        isValid = true
-                    }else if(output.isBlank()) {
-                        isValid = false
-                        Alert(Alert.AlertType.ERROR,
-                            "filename must not be blank").showAndWait()
-                    } else if(!PLAIN_TEXT_FILE_EXTENSIONS.any{output.endsWith(".$it")}) {
-                        isValid = false
-                        Alert(Alert.AlertType.ERROR,
-                        PLAIN_TEXT_FILE_EXTENSIONS.fold("filename must end in a supported extension:\n"){
-                            acc, elem -> "$acc .$elem"
-                        }).showAndWait()
-                    }
-                    else {
-                        isValid = true
-                        val escaped = output.replace(Regex("[^a-zA-Z0-9 _.-]"), "_")
-                        note.file.renameTo(File(note.file.parentFile, escaped))
-                        contentContainer.content = layoutColumnContents(load(dirFile).columns)
-                    }
-                } while (!isValid)
+                promptForFileName(false, note.file.parentFile,
+                    "rename note file \n\'${note.file.name}\'", note.file.name
+                )?.let {
+                    note.file.renameTo(it)
+                    contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                }
             }}
         )
         setOnDragDone { println("$this: drag done:$it") }
@@ -149,42 +133,21 @@ class Gui : Application() {
                     //prefHeightProperty().bind()
                 },
             ButtonBar().also{ butts ->
-                butts.buttons.add(Button("New Note").apply {setOnAction {
-                    var isValid: Boolean
-                    do{
-                        val tid = TextInputDialog("new note.txt").apply {
-                            headerText  = "name of new note"
-                            graphic = null
-                        }
-
-                        val output:String = tid.showAndWait().orElse("")
-                        val escaped = output.replace(Regex("[^a-zA-Z0-9 _.-]"), "_")
-
-                        if(output.isEmpty()) {//canceled
-                            isValid = true
-                        }else if(output.isBlank()) {
-                            isValid = false
-                            Alert(Alert.AlertType.ERROR,
-                                "filename must not be blank").showAndWait()
-                        } else if(!PLAIN_TEXT_FILE_EXTENSIONS.any{escaped.endsWith(".$it")}) {
-                            isValid = false
-                            Alert(Alert.AlertType.ERROR,
-                                PLAIN_TEXT_FILE_EXTENSIONS.fold("filename must end in a supported extension:\n"){
-                                        acc, elem -> "$acc .$elem"
-                                }).showAndWait()
-                        }
-                        else if(File(column.folder, escaped).exists()) {
-                            isValid = false
-                            Alert(Alert.AlertType.ERROR,
-                                "File already exists").showAndWait()
-                        }
-                        else {
-                            isValid = true
-                            File(column.folder, escaped).createNewFile()
-                            //note.file.renameTo(File(note.file.parentFile, escaped))
-                            contentContainer.content = layoutColumnContents(load(dirFile).columns)
-                        }
-                    } while (!isValid)
+                butts.buttons.addAll(Button("New Note").apply {setOnAction {
+                    promptForFileName(false, column.folder,
+                        "Name of new note:", "new note.txt"
+                    )?.let {
+                        it.createNewFile()
+                        contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                    }
+                }},
+                Button("Rename Column").apply{setOnAction {
+                    promptForFileName(true, dirFile,
+                        "Rename column \'${column.name}\' to:", column.name
+                    )?.let {
+                        column.folder.renameTo(it)
+                        contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                    }
                 }})
             })
         })
@@ -204,9 +167,7 @@ class Gui : Application() {
                 }
 
                 onDragDropped = EventHandler { event ->
-                    /* data dropped */
                     println("$this: onDragDropped: $event")
-                    /* if there is a string data on dragboard, read it and use it */
                     val db = event.dragboard
                     var success = false
                     if (db.hasFiles()) {
@@ -235,4 +196,46 @@ class Gui : Application() {
         }
         return uiColumns
     }
+
+    private fun promptForFileName(trueDirFalseFile:Boolean,
+                                  parent:File,
+                                  promptText:String,
+                                  initialBoxText:String
+    ):File? {
+        var isValid: Boolean
+        do{
+            val tid = TextInputDialog(initialBoxText).apply {
+                headerText  = promptText
+                graphic = null
+            }
+
+            val output:String = tid.showAndWait().orElse("")
+            val escaped = output.replace(Regex("[^a-zA-Z0-9 _.-]"), "_")
+            val newFile = File(parent, escaped)
+
+            if(output.isEmpty()) {//canceled
+                isValid = true
+            }else if(output.isBlank()) {
+                isValid = false
+                Alert(Alert.AlertType.ERROR,
+                    "file name must not be blank").showAndWait()
+            } else if(!trueDirFalseFile && !PLAIN_TEXT_FILE_EXTENSIONS.any{output.endsWith(".$it")}) {
+                isValid = false
+                Alert(Alert.AlertType.ERROR,
+                    PLAIN_TEXT_FILE_EXTENSIONS.fold("file name must end in a supported extension:\n"){
+                            acc, elem -> "$acc .$elem"
+                    }).showAndWait()
+            } else if(newFile.exists()) {
+                isValid = false
+                Alert(Alert.AlertType.ERROR,
+                    "A File or directory with that name already exists").showAndWait()
+            }else {
+                //isValid = true
+                return newFile
+            }
+        } while (!isValid)
+        return null
+    }
+
 }
+//in the column func, need a references to the stage to set the title
