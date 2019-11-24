@@ -31,6 +31,7 @@ import javafx.scene.input.TransferMode
 //   goes against our "ordering is alphabetical only" approach
 // when dragging a note, auto-scroll when the mouse is near the window's edge
 // user can choose kanban directory
+// (fix) prevent a drag-move from overwriting an existing file with the same name
 /**terminology:
  * board: the whole thing. A folder with subfolders that each contain 0 or more text files
  * column: contains notes/tasks. represented on-disk by a subfolder of the board
@@ -80,10 +81,6 @@ class Gui : Application() {
             )
         })
         root.children.add(colScrol)
-        //colScrol.prefHeightProperty().bind(root.heightProperty())
-        //content.minHeightProperty().bind(root.heightProperty())
-
-        //primaryStage.scene.root
         primaryStage.scene = Scene(root, 600.0, 600.0)
         primaryStage.show()
     }
