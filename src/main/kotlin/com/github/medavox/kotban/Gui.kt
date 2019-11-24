@@ -132,7 +132,19 @@ class Gui : Application() {
     }
 
     private fun uiOf(column:Column):Node = VBox().also { colContainer ->
-        colContainer.children.add(Label(column.name+" - "+column.notes.size))
+        colContainer.children.add(HBox().also { bar ->
+            bar.children.addAll(
+                Label(column.name+" - "+column.notes.size).apply{
+                    //maxWidth = 200.0
+                    isWrapText = true
+                    //prefHeight = 120.0
+                    //this.autosize()
+                    //prefHeightProperty().bind()
+                },
+            ButtonBar().also{ butts ->
+                butts.buttons.add(Button("New Note"))
+            })
+        })
         colContainer.children.add(ScrollPane().also { notesScrollPane ->
             notesScrollPane.prefViewportWidth = 300.0
             notesScrollPane.isFitToWidth = true
