@@ -19,15 +19,16 @@ import javafx.scene.input.TransferMode
 // create and delete notes
 // create and delete columns
 // edit column names (which are actually folder names)
-// edit note names (which are actually file names)
 // click-to-maximise a single note
 // tags - supported through a custom line in the note's text
 // filter by tag
+// wrap long column names
 // show a visual hint about where the note will go
 // monospace font?
 // allow dragging to a specific placement in the column?
 //   goes against our "ordering is alphabetical only" approach
-// auto-scroll when dragging a note, and the mouse is near the window's edge
+// when dragging a note, auto-scroll when the mouse is near the window's edge
+// user chooses kanban directory
 /**terminology:
  * board: the whole thing. A folder with subfolders that each contain 0 or more text files
  * column: contains notes/tasks. represented on-disk by a subfolder of the board
