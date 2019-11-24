@@ -59,3 +59,46 @@ fun openInDefaultTextEditor(file:File) {
         Desktop.getDesktop().edit(file)
     }
 }
+
+fun File.recurse(
+            operate:(File) -> Unit,
+            filter:String="",
+            acceptFile:(File)->Boolean={true}
+) {
+    require(this.isDirectory && this.exists()) {
+        "supplied argument must be a directory which exists" }
+    val files:Array<File>? = this.listFiles()
+    if(files == null) {
+        System.err.println("unable to query listings in directory \'$this\'")
+        return
+    }
+    for(f in files) {
+        if(f.isDirectory) {
+            f.recurse(operate, filter, acceptFile)
+        }
+        else {
+            if(f.name.contains(filter) && acceptFile(f)) {
+                operate(f)
+            }
+        }
+    }
+}
+
+fun File.recursivelyDelete() {
+    require(this.isDirectory && this.exists()) {
+        "supplied argument must be a directory which exists" }
+    val files:Array<File>? = this.listFiles()
+    if(files == null) {
+        System.err.println("unable to query listings in directory \'$this\'")
+        return
+    }
+    for(f in files) {
+        if(f.isDirectory) {
+            f.recursivelyDelete()
+            f.delete()
+        } else {
+            f.delete()
+        }
+    }
+    this.delete()
+}

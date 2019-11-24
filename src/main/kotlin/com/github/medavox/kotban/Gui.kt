@@ -5,6 +5,7 @@ import javafx.event.EventHandler
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.*
+import javafx.scene.control.Alert.AlertType.CONFIRMATION
 import javafx.scene.layout.HBox
 import javafx.stage.Stage
 import java.io.File
@@ -183,14 +184,45 @@ class Gui : Application() {
                 }
             }
         })
-        val contextMenu = ContextMenu(MenuItem("Rename Column").apply{setOnAction{
-            promptForFileName(true, dirFile,
-                "Rename column \'${column.name}\' to:", column.name
-            )?.let {
-                column.folder.renameTo(it)
-                contentContainer.content = layoutColumnContents(load(dirFile).columns)
-            }
-        }})
+        val contextMenu = ContextMenu(
+            MenuItem("Rename Column").apply{setOnAction{
+                promptForFileName(true, dirFile,
+                    "Rename column \'${column.name}\' to:", column.name
+                )?.let {
+                    column.folder.renameTo(it)
+                    contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                }
+            }},
+            MenuItem("Delete Column").apply{setOnAction{
+                val confirmation = Alert(CONFIRMATION).apply {
+                    headerText = "delete this column \'${column.name}\'?"
+                    //dialogPane.
+                }.showAndWait()
+                if(confirmation.isPresent && confirmation.get() == ButtonType.OK) {
+                    if(column.notes.isNotEmpty()) {
+                        val doubleCheck = Alert(CONFIRMATION).apply{
+                            headerText = column.folder.list()!!.fold(
+                                "The column \'${column.name}\' isn't empty!\n"+
+                                    "Are you SURE you want to delete the column and all its contents:"
+                            ) { acc:String, elem:String ->
+                                acc + "\n"+elem
+                            }+"?"
+                        }.showAndWait()
+                        if(doubleCheck.isPresent && doubleCheck.get() == ButtonType.OK) {
+                            //in order to delete a directory with contents on the JVM,
+                            //we have to do our own recursive delete
+                            column.folder.recursivelyDelete()
+                            println("deleted column ${column.name}")
+                            contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                        }
+                    }else {
+                        //column has no notes, so just delete it
+                        column.folder.delete()
+                        contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                    }
+                }
+            }}
+        )
         colContainer.onContextMenuRequested = EventHandler {
             contextMenu.show(colContainer, it.screenX, it.screenY)
         }
