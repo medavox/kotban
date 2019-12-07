@@ -25,32 +25,30 @@ class ScrollFreeTextArea : StackPane() {
     private val BOTTOM_PADDING = 6.0
 
     init {
-        setAlignment(Pos.TOP_LEFT)
+        alignment = Pos.TOP_LEFT
         this.textArea = object:TextArea() {
             override fun layoutChildren() {
                 super.layoutChildren()
                 cauntint = lookup(".content") as Region
                 contentHeight.bind(cauntint.heightProperty())
-                cauntint.heightProperty().addListener(object:ChangeListener<Number> {
-                    override fun changed(paramObservableValue:ObservableValue<out Number>, paramT1:Number, paramT2:Number) {
-                        //System.out.println("Content View Height :"+paramT2.doubleValue());
-                    }
-                })
+                cauntint.heightProperty().addListener { _, _, _ ->
+                    //System.out.println("Content View Height :"+paramT2.doubleValue());
+                }
             }
         }
         this.textArea.setWrapText(true)
 
         this.label = Label()
-        this.label.setWrapText(true)
+        this.label.isWrapText = true
         this.label.prefWidthProperty().bind(this.textArea.widthProperty())
         label.textProperty().bind(object:StringBinding() {
             init {
                 bind(textArea.textProperty())
             }
             override fun computeValue():String {
-                if (textArea.getText() != null && textArea.getText().length > 0) {
+                if (textArea.getText() != null && textArea.text.length > 0) {
                     if ((textArea.text[textArea.text.length - 1]) != enterChar) {
-                        return textArea.getText() + enterChar
+                        return textArea.text + enterChar
                     }
                 }
                 return textArea.getText()
@@ -65,34 +63,29 @@ class ScrollFreeTextArea : StackPane() {
         // Binding the container width/height to the TextArea width.
         lblContainer.maxWidthProperty().bind(textArea.widthProperty())
 
-        textArea.textProperty().addListener(object:ChangeListener<String> {
-            override fun changed(paramObservableValue:ObservableValue<out String>, paramT1:String, value:String) {
-                layoutForNewLine(textArea.getText())
-            }
-        })
+        textArea.textProperty().addListener { _, _, _ ->
+            layoutForNewLine(textArea.getText())
+        }
 
-        label.heightProperty().addListener(object:ChangeListener<Number> {
-            override fun changed(paramObservableValue:ObservableValue<out Number>, paramT1:Number, paramT2:Number) {
-                layoutForNewLine(textArea.getText())
-            }
-        })
+        label.heightProperty().addListener { _, _, _ ->
+            layoutForNewLine(textArea.getText())
+        }
 
-        getChildren().addAll(lblContainer, textArea)
+        children.addAll(lblContainer, textArea)
     }
 
     private fun layoutForNewLine(text:String) {
-        if (text != null && text.length > 0 && (text[text.length - 1]) == enterChar) {
-            textArea.setPrefHeight(label.getHeight() + NEW_LINE_HEIGHT + TOP_PADDING + BOTTOM_PADDING)
-            textArea.setMinHeight(textArea.getPrefHeight())
+        if (text.length > 0 && (text[text.length - 1]) == enterChar) {
+            textArea.prefHeight = label.height + NEW_LINE_HEIGHT + TOP_PADDING + BOTTOM_PADDING
+            textArea.minHeight = textArea.prefHeight
         }
         else {
-            textArea.setPrefHeight(label.getHeight() + TOP_PADDING + BOTTOM_PADDING)
-            textArea.setMinHeight(textArea.getPrefHeight())
+            textArea.prefHeight = label.height + TOP_PADDING + BOTTOM_PADDING
+            textArea.minHeight = textArea.prefHeight
         }
     }
 
     fun getTextArea():TextArea {
         return textArea
     }
-
 }
