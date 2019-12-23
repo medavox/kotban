@@ -1,24 +1,23 @@
 package com.github.medavox.kotban
 
+import com.sun.javafx.tk.FontMetrics
+import com.sun.javafx.tk.Toolkit
 import javafx.application.Application
 import javafx.event.EventHandler
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.control.Alert.AlertType.CONFIRMATION
-import javafx.scene.layout.HBox
-import javafx.stage.Stage
-import java.io.File
-import javafx.scene.layout.VBox
-import javafx.scene.control.ButtonBar
 import javafx.scene.input.ClipboardContent
 import javafx.scene.input.TransferMode
+import javafx.scene.layout.HBox
+import javafx.scene.layout.VBox
+import javafx.stage.Stage
+import java.io.File
+
 
 //todo:
 // line numbers in note contents
-// line wrapping in notes
-// expand note textarea to fit number of lines,
-//   instead of keeping height and adding another vertical scrollbar
 // (fix) vertical scrollbars on columns that aren't tall enough to need them
 // click-to-maximise a single note
 // tags - supported through a custom line in the note's text
@@ -92,9 +91,28 @@ class Gui : Application() {
     /**Generates the UI component hierarchy for a single Note.*/
     private fun uiOf(note:Note): Node = TitledPane().apply {
         text = note.title
-        content = TextArea(note.contents).apply{
-            isEditable=false
-            DragResizerXY(this).makeResizable()
+        content = TextArea(note.contents).also { textArea ->
+            textArea.isEditable=false
+            textArea.isWrapText = true
+            //DragResizerXY(this).makeResizable()
+            //just checked, and this is always 40 - it's not updated automatically by the TextArea's width
+            //println("column count:"+textArea.prefColumnCount)
+            val fontMetrics: FontMetrics = Toolkit.getToolkit().fontLoader.getFontMetrics(textArea.font)
+            //manually work out how many rows our text needs
+            textArea.prefRowCount = textArea.text.split('\n').
+                //todo: find better way to test for line breaks
+                fold(textArea.text.count { it == '\n' || it == '\r' } + 1 )//no '\n's means there's 1 line
+                { acc: Int, line: String ->
+                    //add the number of times that the line is longer than the text area's width,
+                    // to the number of preferred rows
+                    val lineWidth = (fontMetrics.computeStringWidth(line) / 300.0).toInt()
+                    if(lineWidth > 0.0) println("line width: $lineWidth")
+                    //this get the maximum number of characters that fit in a single line
+                    acc + lineWidth
+                }
+            println("\"${note.title}\" pref rows:"+textArea.prefRowCount+"; max height: "+textArea.maxHeight)
+            //val length = fontMetrics.computeStringWidth(textArea.text)
+            //println("\'${note.title}\' height: ${it.height}; prefHeight:${it.prefHeight}")
         }
         contextMenu = ContextMenu(
             MenuItem("Open note in editor").apply{setOnAction{
@@ -212,7 +230,6 @@ class Gui : Application() {
             MenuItem("Delete Column").apply{setOnAction{
                 val confirmation = Alert(CONFIRMATION).apply {
                     headerText = "delete this column \'${column.name}\'?"
-                    //dialogPane.
                 }.showAndWait()
                 if(confirmation.isPresent && confirmation.get() == ButtonType.OK) {
                     if(column.notes.isNotEmpty()) {
