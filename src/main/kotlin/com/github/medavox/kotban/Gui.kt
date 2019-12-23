@@ -89,7 +89,7 @@ class Gui : Application() {
         primaryStage.show()
     }
 
-
+    /**Generates the UI component hierarchy for a single Note.*/
     private fun uiOf(note:Note): Node = TitledPane().apply {
         text = note.title
         content = TextArea(note.contents).apply{
@@ -100,7 +100,7 @@ class Gui : Application() {
             MenuItem("Open note in editor").apply{setOnAction{
                 openInDefaultTextEditor(note.file)
             }},
-            MenuItem("Rename note").apply {setOnAction{
+            MenuItem("Rename note").apply{setOnAction{
                 promptForFileName(false, note.file.parentFile,
                     "rename note file \n\'${note.file.name}\'", note.file.name
                 )?.let {
@@ -122,10 +122,9 @@ class Gui : Application() {
         setOnDragDone { println("$this: drag done:$it") }
         setOnDragEntered { println("$this: drag entered:$it") }
         setOnDragExited { println("$this: drag exited:$it") }
-        //setOnDragDropped { println("drag dropped:$it") }
         onDragDetected = EventHandler {event ->
             //println("drag detected:$it")
-            val dragBoard = this.startDragAndDrop(TransferMode.MOVE)
+            val dragBoard = startDragAndDrop(TransferMode.MOVE)
             println("dragBoard:$dragBoard")
             //put a file on the dragboard
             val content = ClipboardContent()
