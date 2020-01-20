@@ -30,14 +30,19 @@ fun load(dir: File):Board {
         Column(subdir.name, subdir, (subdir.listFiles() ?: arrayOf()).filter {file:File ->
             //println("file in $subdir: $file")
             //filter out non-files, unreadables, nonexistent, >10MB, without the right extensions
-            file.isFile && file.canRead() && file.exists() && file.length() < (10240 * 1024) &&
-                    file.extension in PLAIN_TEXT_FILE_EXTENSIONS
+            isValidFile(file)
         }.map { file ->
             Note(file = file, title = file.name, contents = file.readText())
         })
     }
     //println("panes: $subDirsAndTheirItems")
     return Board(name=dir.name, columns=subDirsWithTheirNotes)
+}
+
+fun isValidFile(file:File):Boolean {
+    return file.isFile && file.canRead() && file.exists() &&
+            file.length() < (10240 * 1024) &&
+            file.extension in PLAIN_TEXT_FILE_EXTENSIONS
 }
 
 data class Board(val name:String, val columns:List<Column>)
@@ -47,8 +52,7 @@ data class Column(val name:String, val folder:File, val notes:List<Note>)
 data class Note(val file:File, val title:String, val contents:String)
 
 fun openInDefaultTextEditor(file:File) {
-    val isValid = file.isFile && file.canRead() && file.exists() && file.length() < (10240 * 1024)
-    if(!isValid) {
+    if(!isValidFile(file)) {
         System.err.println("invalid file for text editing: $file")
         return
     }
