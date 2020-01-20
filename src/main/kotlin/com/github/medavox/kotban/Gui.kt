@@ -18,7 +18,8 @@ import java.io.File
 
 //todo:
 // line numbers in note contents
-// (fix) vertical scrollbars on columns that aren't tall enough to need them
+// (fix) vertical scrollbars on columns that aren't tall enough to need them,
+//   but which disappear after a refresh
 // click-to-maximise a single note
 // tags - supported through a custom line in the note's text
 // filter by tag
@@ -31,6 +32,8 @@ import java.io.File
 // when dragging a note, auto-scroll when the mouse is near the window's edge
 // user can choose kanban directory
 // (fix) prevent a drag-move from overwriting an existing file with the same name
+// (fix) very long notes still have scrollbars,
+//   cause scrollbars to appear on other notes in the same column
 /**terminology:
  * board: the whole thing. A folder with subfolders that each contain 0 or more text files
  * column: contains notes/tasks. represented on-disk by a subfolder of the board
