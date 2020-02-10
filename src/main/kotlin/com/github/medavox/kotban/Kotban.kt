@@ -41,7 +41,7 @@ import java.io.File
  * Implemented with JavaFX, available as part of Java 8's language API.
  * Note that after Java 8, JavaFX was made an external library.
  * @see [https://docs.oracle.com/javase/8/javafx/api](JavaFX javadoc)*/
-class Gui : Application() {
+class Kotban : Application() {
     private val dir = "./testboard"
     val dirFile = File(dir)
     private lateinit var contentContainer: ScrollPane
@@ -56,7 +56,7 @@ class Gui : Application() {
 
             prefViewportWidthProperty().bind(root.widthProperty())
             isFitToHeight = true
-            val board = load(dirFile)
+            val board = Board.loadFrom(dirFile)
             primaryStage.title = board.name+" - Kotban"
             content = layoutColumnContents(board.columns)
         }
@@ -67,7 +67,7 @@ class Gui : Application() {
             buttons.addAll(
                 Button("Refresh").apply{
                     setOnMouseClicked {
-                        val board = load(dirFile)
+                        val board = Board.loadFrom(dirFile)
                         primaryStage.title = board.name+" - Kotban"
                         colScrol.content = layoutColumnContents(board.columns)
                     }
@@ -77,7 +77,7 @@ class Gui : Application() {
                         "Name of new column:", "New column"
                     )?.let {
                         it.mkdir()
-                        contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
                     }
                 }}
             )
@@ -126,7 +126,7 @@ class Gui : Application() {
                     "rename note file \n\'${note.file.name}\'", note.file.name
                 )?.let {
                     note.file.renameTo(it)
-                    contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
                 }
             }},
             MenuItem("Delete note").apply{setOnAction{
@@ -136,7 +136,7 @@ class Gui : Application() {
                 }.showAndWait()
                 if(confirmation.isPresent && confirmation.get() == ButtonType.OK) {
                     note.file.delete()
-                    contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
                 }
             }}
         )
@@ -172,7 +172,7 @@ class Gui : Application() {
                         "Name of new note:", "new note.txt"
                     )?.let {
                         it.createNewFile()
-                        contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
                     }
                 }})
             })
@@ -208,7 +208,7 @@ class Gui : Application() {
                         println("files: ${db.files}")
                         db.files[0].renameTo(File(column.folder, db.files[0].name))
                         success = true
-                        contentContainer.content = layoutColumnContents(load(dirFile).columns)//todo: figure out how to do UI refresh here
+                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)//todo: figure out how to do UI refresh here
                     }
                     /* let the source know whether the string was successfully
                          * transferred and used */
@@ -227,7 +227,7 @@ class Gui : Application() {
                     "Rename column \'${column.name}\' to:", column.name
                 )?.let {
                     column.folder.renameTo(it)
-                    contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
                 }
             }},
             MenuItem("Delete Column").apply{setOnAction{
@@ -249,12 +249,12 @@ class Gui : Application() {
                             //we have to do our own recursive delete
                             column.folder.recursivelyDelete()
                             println("deleted column ${column.name}")
-                            contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                            contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
                         }
                     }else {
                         //column has no notes, so just delete it
                         column.folder.delete()
-                        contentContainer.content = layoutColumnContents(load(dirFile).columns)
+                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
                     }
                 }
             }}
