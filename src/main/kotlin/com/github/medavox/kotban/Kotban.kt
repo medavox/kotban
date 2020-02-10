@@ -89,6 +89,9 @@ class Kotban : Application() {
         root.children.add(colScrol)
         primaryStage.scene = Scene(root, 600.0, 600.0)
         primaryStage.show()
+
+        val blus = (colScrol.content as HBox).children[0] as VBox
+        println("width: ${blus.width}")
     }
 
     /**Generates the UI component hierarchy for a single Note.*/
@@ -102,16 +105,19 @@ class Kotban : Application() {
             //println("column count:"+textArea.prefColumnCount)
             val fontMetrics: FontMetrics = Toolkit.getToolkit().fontLoader.getFontMetrics(textArea.font)
             //manually work out how many rows our text needs
-            textArea.prefRowCount = textArea.text.split('\n').
+            textArea.prefRowCount = textArea.text.split('\n', '\r').fold(1)
                 //todo: find better way to test for line breaks
-                fold(textArea.text.count { it == '\n' || it == '\r' } + 1 )//no '\n's means there's 1 line
+                //fold(textArea.text.count { it == '\n' || it == '\r' } + 1 )//no '\n's means there's 1 line
                 { acc: Int, line: String ->
                     //add the number of times that the line is longer than the text area's width,
                     // to the number of preferred rows
-                    val lineWidth = (fontMetrics.computeStringWidth(line) / COLUMN_WIDTH).toInt()
-                    if(lineWidth > 0.0) println("line width: $lineWidth")
+                    val lineWidth = fontMetrics.computeStringWidth(line)
+                    //fixme: dividing by the total column width doesn't take into account the horizontal space lost to the column's scroll bar
+                    val linesWhenWrapped:Int = (lineWidth / COLUMN_WIDTH).toInt() +1 //a line which isn't as long as the full column width still counts as a line!
+                    /*if(linesWhenWrapped > 0)*/ println("line width: $lineWidth")
+                    println("lines when wrapped: $linesWhenWrapped")
                     //this get the maximum number of characters that fit in a single line
-                    acc + lineWidth
+                    acc + linesWhenWrapped
                 }
             println("\"${note.title}\" pref rows:"+textArea.prefRowCount+"; max height: "+textArea.maxHeight)
             //val length = fontMetrics.computeStringWidth(textArea.text)
@@ -140,9 +146,9 @@ class Kotban : Application() {
                 }
             }}
         )
-        setOnDragDone { println("$this: drag done:$it") }
+        /*setOnDragDone { println("$this: drag done:$it") }
         setOnDragEntered { println("$this: drag entered:$it") }
-        setOnDragExited { println("$this: drag exited:$it") }
+        setOnDragExited { println("$this: drag exited:$it") }*/
         onDragDetected = EventHandler {event ->
             //println("drag detected:$it")
             val dragBoard = startDragAndDrop(TransferMode.MOVE)
@@ -213,7 +219,6 @@ class Kotban : Application() {
                     /* let the source know whether the string was successfully
                          * transferred and used */
                     event.isDropCompleted = success
-
                     event.consume()
                 }
                 for (note in column.notes) {
@@ -221,48 +226,50 @@ class Kotban : Application() {
                 }
             }
         })
-        val contextMenu = ContextMenu(
-            MenuItem("Rename Column").apply{setOnAction{
-                promptForFileName(true, dirFile,
-                    "Rename column \'${column.name}\' to:", column.name
-                )?.let {
-                    column.folder.renameTo(it)
-                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
-                }
-            }},
-            MenuItem("Delete Column").apply{setOnAction{
-                val confirmation = Alert(CONFIRMATION).apply {
-                    headerText = "delete this column \'${column.name}\'?"
-                }.showAndWait()
-                if(confirmation.isPresent && confirmation.get() == ButtonType.OK) {
-                    if(column.notes.isNotEmpty()) {
-                        val doubleCheck = Alert(CONFIRMATION).apply{
-                            headerText = column.folder.list()!!.fold(
-                                "The column \'${column.name}\' isn't empty!\n"+
-                                    "Are you SURE you want to delete the column and all its contents:"
-                            ) { acc:String, elem:String ->
-                                acc + "\n"+elem
-                            }+"?"
-                        }.showAndWait()
-                        if(doubleCheck.isPresent && doubleCheck.get() == ButtonType.OK) {
-                            //in order to delete a directory with contents on the JVM,
-                            //we have to do our own recursive delete
-                            column.folder.recursivelyDelete()
-                            println("deleted column ${column.name}")
-                            contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
-                        }
-                    }else {
-                        //column has no notes, so just delete it
-                        column.folder.delete()
-                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
-                    }
-                }
-            }}
-        )
+        val contextMenu = contextMenuFor(column)
         colContainer.onContextMenuRequested = EventHandler {
             contextMenu.show(colContainer, it.screenX, it.screenY)
         }
     }
+
+    private fun contextMenuFor(column:Column):ContextMenu = ContextMenu(
+        MenuItem("Rename Column").apply{setOnAction{
+            promptForFileName(true, dirFile,
+                "Rename column \'${column.name}\' to:", column.name
+            )?.let {
+                column.folder.renameTo(it)
+                contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+            }
+        }},
+        MenuItem("Delete Column").apply{setOnAction{
+            val confirmation = Alert(CONFIRMATION).apply {
+                headerText = "delete this column \'${column.name}\'?"
+            }.showAndWait()
+            if(confirmation.isPresent && confirmation.get() == ButtonType.OK) {
+                if(column.notes.isNotEmpty()) {
+                    val doubleCheck = Alert(CONFIRMATION).apply{
+                        headerText = column.folder.list()!!.fold(
+                            "The column \'${column.name}\' isn't empty!\n"+
+                                    "Are you SURE you want to delete the column and all its contents:"
+                        ) { acc:String, elem:String ->
+                            acc + "\n"+elem
+                        }+"?"
+                    }.showAndWait()
+                    if(doubleCheck.isPresent && doubleCheck.get() == ButtonType.OK) {
+                        //in order to delete a directory with contents on the JVM,
+                        //we have to do our own recursive delete
+                        column.folder.recursivelyDelete()
+                        println("deleted column ${column.name}")
+                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+                    }
+                }else {
+                    //column has no notes, so just delete it
+                    column.folder.delete()
+                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+                }
+            }
+        }}
+    )
 
     private fun layoutColumnContents(columns:List<Column>):HBox {
         val uiColumns = HBox()
