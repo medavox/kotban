@@ -26,10 +26,10 @@ data class Board(val name:String, val columns:List<Column>) {
                     isValidFile(file)
                 }.map { file ->
                     Note(file = file, title = file.name, contents = file.readText())
-                })
+                }.sortedBy { it.title })
             }
             //println("panes: $subDirsAndTheirItems")
-            return Board(name=dir.name, columns=subDirsWithTheirNotes)
+            return Board(name=dir.name, columns=subDirsWithTheirNotes.sortedBy { it.name })
         }
     }
 }
