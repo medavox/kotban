@@ -45,6 +45,7 @@ class Kotban : Application() {
     private val dir = "./testboard"
     val dirFile = File(dir)
     private lateinit var contentContainer: ScrollPane
+    val COLUMN_WIDTH = 300.0
     /*Instead of making entries editable (and effectively having to write our own text editor),
     * make each entry, upon being clicked, open itself in the user's choice of editor.
     * That allows us to focus on prettifying the Markdown */
@@ -63,7 +64,6 @@ class Kotban : Application() {
 
         val mainButtonBar = ButtonBar().apply {
             //bar.nodeOrientation = NodeOrientation.LEFT_TO_RIGHT
-            //bar.ali
             buttons.addAll(
                 Button("Refresh").apply{
                     setOnMouseClicked {
@@ -98,7 +98,7 @@ class Kotban : Application() {
             textArea.isEditable=false
             textArea.isWrapText = true
             //DragResizerXY(this).makeResizable()
-            //just checked, and this is always 40 - it's not updated automatically by the TextArea's width
+            //this is always 40 - it's not updated automatically by the TextArea's width
             //println("column count:"+textArea.prefColumnCount)
             val fontMetrics: FontMetrics = Toolkit.getToolkit().fontLoader.getFontMetrics(textArea.font)
             //manually work out how many rows our text needs
@@ -108,7 +108,7 @@ class Kotban : Application() {
                 { acc: Int, line: String ->
                     //add the number of times that the line is longer than the text area's width,
                     // to the number of preferred rows
-                    val lineWidth = (fontMetrics.computeStringWidth(line) / 300.0).toInt()
+                    val lineWidth = (fontMetrics.computeStringWidth(line) / COLUMN_WIDTH).toInt()
                     if(lineWidth > 0.0) println("line width: $lineWidth")
                     //this get the maximum number of characters that fit in a single line
                     acc + lineWidth
@@ -179,7 +179,7 @@ class Kotban : Application() {
         }
         colContainer.children.add(columnButtonBar)
         colContainer.children.add(ScrollPane().also { notesScrollPane ->
-            notesScrollPane.prefViewportWidth = 300.0
+            notesScrollPane.prefViewportWidth = COLUMN_WIDTH
             notesScrollPane.isFitToWidth = true
             notesScrollPane.content = VBox().apply {
                 if(column.notes.isEmpty()) {
