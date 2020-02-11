@@ -50,7 +50,7 @@ class Kotban : Application() {
     private lateinit var contentContainer: ScrollPane
     val COLUMN_WIDTH = 300.0
     //discovered through experimentation.
-    val SCROLLBAR_WIDTH = 22
+    val SCROLLBAR_WIDTH = 20
     /*Instead of making entries editable (and effectively having to write our own text editor),
     * make each entry, upon being clicked, open itself in the user's choice of editor.
     * That allows us to focus on prettifying the Markdown */
@@ -96,38 +96,6 @@ class Kotban : Application() {
         primaryStage.title = board.name+" - Kotban"
         primaryStage.show()//stage must be shown before colscrol content is rendered, for some reason
         colScrol.content = layoutColumnContents(board.columns)
-    }
-
-    private fun getRowCount(textArea: TextArea):Int {
-        var currentRowCount = 0
-        val helper = Text()
-        // text needs to be on the scene
-        val text = Text(textArea.text)//textArea.lookup(".text") as Text? ?: return currentRowCount
-        /*
-         * Now we just count the paragraphs: If the paragraph size is less
-         * than the current wrappingWidth then increment; Otherwise use our
-         * Text helper instance to calculate the change in height for the
-         * current paragraph with "wrappingWidth" set to the actual
-         * wrappingWidth of the TextArea text
-         */
-        helper.font = textArea.font
-        for (paragraph:CharSequence in textArea.paragraphs) {
-            helper.text = paragraph.toString()
-            val localBounds: Bounds = helper.boundsInLocal
-
-            val paragraphWidth:Double = localBounds.width
-            currentRowCount += if(paragraphWidth <= text.wrappingWidth) 1 else {
-                val oldHeight:Double = localBounds.height
-                // this actually sets the automatic size adjustment into motion...
-                helper.wrappingWidth = text.wrappingWidth
-                val newHeight:Double = helper.boundsInLocal.height
-                // ...and we reset it after computation
-                helper.wrappingWidth = 0.0;
-
-                (newHeight / oldHeight).toInt()
-            }
-        }
-        return currentRowCount
     }
 
     private fun estimateWordBoundaryIgnorantWrapping(fontMetrics: FontMetrics, line:String, maxWidthPx:Double):List<String> {
@@ -179,7 +147,7 @@ class Kotban : Application() {
                 //which means that after the first moving of the start index, they're all out of sync with the original line
                 //solution: append the startPoint to ofsets received from findAll
 
-                printIndices()
+                //printIndices()
                 wraptLineEnd = backTrackToWordBoundary?.plus(wraptLineStart) ?: wraptLineEnd -1
                 if(wraptLineEnd <= wraptLineStart) {
                     println("ABOUT TO FUCK UP! wraptStart: $wraptLineStart; wraptLineEnd: $wraptLineEnd; whole line:")
@@ -190,11 +158,11 @@ class Kotban : Application() {
                     println(line.substring(wraptLineStart))*/
                 }
             }
-            printIndices()
+            //printIndices()
             output.add(line.substring(wraptLineStart, wraptLineEnd))
             wraptLineStart = wraptLineEnd
             wraptLineEnd = line.length
-            println("new endpoint: $wraptLineEnd")
+            //println("new endpoint: $wraptLineEnd")
         }
         return output
     }
@@ -206,10 +174,6 @@ class Kotban : Application() {
             textArea.isEditable=false
             textArea.isWrapText = true
 
-
-            //DragResizerXY(this).makeResizable()
-            //this is always 40 - it's not updated automatically by the TextArea's width
-            //println("column count:"+textArea.prefColumnCount)
             val fontMetrics: FontMetrics = Toolkit.getToolkit().fontLoader.getFontMetrics(textArea.font)
             //manually work out how many rows our text needs
             //the actual bug seems to be:
@@ -217,25 +181,25 @@ class Kotban : Application() {
             // even though it could technically fit.
             // the line is wrapped anyway only when the text area's height is larger than one of its containers
             println("\n\n\nNEW FILE\n\n\n")
-            val calcedRows = textArea.paragraphs.fold(1) { acc: Int, line: CharSequence ->
+            val calcedRows = textArea.paragraphs.fold(0) { acc: Int, line: CharSequence ->
+                val lineWidth = fontMetrics.computeStringWidth(line.toString())
+                //work out how many wrapped lines each non-empty 'paragraph' takes up
 
-                    //add the number of times that the line is longer than the text area's width,
-                    // to the number of preferred rows
-                    val lineWidth = fontMetrics.computeStringWidth(line.toString())
-                    //when reverse-engineering the wrapping, i'm not taking into account word boundaries
-                    //fixme: dividing by the total column width doesn't take into account the horizontal space lost to the column's scroll bar
-                    val linesWhenWrapped:Int = (lineWidth / (COLUMN_WIDTH-18)).toInt() +1 //a line which isn't as long as the full column width still counts as a line!
 /*                    if(line.isNotEmpty()) {
                         print("line \"${line.substring(0, min(line.length, 10))}\"... ")
                     }else print("empty line ")
                     println("width: $lineWidth; wrapped lines: $linesWhenWrapped")*/
-                    if(line.isNotEmpty()) {
-                        println(">:")
-                        estimateWordBoundaryAwareWrapping(fontMetrics, line.toString(), COLUMN_WIDTH).forEach{println(it)}
-                    }
-                    acc + linesWhenWrapped
+                acc + if(line.isEmpty()) 1 else {
+                    //println(">:")
+                    val selfWrappedines = estimateWordBoundaryAwareWrapping(fontMetrics, line.toString(),
+                    //take into account the horizontal space lost to the TextArea's scroll bar
+                        COLUMN_WIDTH-SCROLLBAR_WIDTH)
+                    selfWrappedines.forEach { println(it) }
+                    selfWrappedines.size
                 }
-            textArea.prefHeight = calcedRows.toDouble() * (fontMetrics.lineHeight + 1.25/*Calculated through sheer fucking trial and error.*/)
+            }
+            //textArea.prefHeight = calcedRows.toDouble() * (fontMetrics.lineHeight + 1.25/*Calculated through sheer fucking trial and error.*/)
+            textArea.prefRowCount = calcedRows
             println("\t\"${note.title}\" calced rows: $calcedRows; pref height: "+textArea.prefHeight)
 
             //val length = fontMetrics.computeStringWidth(textArea.text)
