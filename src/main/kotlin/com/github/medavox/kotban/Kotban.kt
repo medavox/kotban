@@ -4,6 +4,7 @@ import com.sun.javafx.tk.FontMetrics
 import com.sun.javafx.tk.Toolkit
 import javafx.application.Application
 import javafx.event.EventHandler
+import javafx.geometry.Bounds
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.*
@@ -150,27 +151,36 @@ class Kotban : Application() {
         val output = mutableListOf<String>()
         var wraptLineStart = 0
         var wraptLineEnd = line.length
+        fun printIndices() {
+            println(line)
+            if(wraptLineStart < wraptLineEnd) {
+                print(" ".repeat(wraptLineStart)+"^")
+                println(" ".repeat(wraptLineEnd-(wraptLineStart+1) )+"^")
+                print(" ".repeat(wraptLineStart)+"s")
+                println(" ".repeat(wraptLineEnd-(wraptLineStart+1) )+"e")
+            }else {
+                print(" ".repeat(wraptLineEnd)+"^")
+                println(" ".repeat(wraptLineStart-(wraptLineEnd+1) )+"^")
+                print(" ".repeat(wraptLineEnd)+"e")
+                println(" ".repeat(wraptLineStart-(wraptLineEnd+1) )+"s")
+            }
+        }
         while(wraptLineStart != line.length) {
             while (fontMetrics.computeStringWidth(line.substring(wraptLineStart, wraptLineEnd)) > maxWidthPx) {
 
+/*                val matchiz = Regex("\\s").findAll(line.substring(wraptLineStart, wraptLineEnd)).toList()
+                val backTrackToWordBoundary = matchiz.lastOrNull()?.range*/
                 val backTrackToWordBoundary = Regex("\\s").
-                    findAll(line.substring(wraptLineStart, wraptLineEnd)).lastOrNull()?.range
+                    findAll(line.substring(wraptLineStart, wraptLineEnd)).lastOrNull()?.range?.first
                 /*backTrackToWordBoundary?.run {
                     println("RANGE first: $first; last: $last; start: $start; endInclusive: $endInclusive")
                 }*/
-                wraptLineEnd = backTrackToWordBoundary?.first ?: wraptLineEnd -1
-                println(line)
-                if(wraptLineStart < wraptLineEnd) {
-                    print(" ".repeat(wraptLineStart)+"^")
-                    println(" ".repeat(wraptLineEnd-(wraptLineStart+1) )+"^")
-                    print(" ".repeat(wraptLineStart)+"s")
-                    println(" ".repeat(wraptLineEnd-(wraptLineStart+1) )+"e")
-                }else {
-                    print(" ".repeat(wraptLineEnd)+"^")
-                    println(" ".repeat(wraptLineStart-(wraptLineEnd+1) )+"^")
-                    print(" ".repeat(wraptLineEnd)+"e")
-                    println(" ".repeat(wraptLineStart-(wraptLineEnd+1) )+"s")
-                }
+                //bug: the index numbers are relative to the STRING PASSED TO FINDALL,
+                //which means that after the first moving of the start index, they're all out of sync with the original line
+                //solution: append the startPoint to ofsets received from findAll
+
+                printIndices()
+                wraptLineEnd = backTrackToWordBoundary?.plus(wraptLineStart) ?: wraptLineEnd -1
                 if(wraptLineEnd <= wraptLineStart) {
                     println("ABOUT TO FUCK UP! wraptStart: $wraptLineStart; wraptLineEnd: $wraptLineEnd; whole line:")
 
@@ -180,9 +190,11 @@ class Kotban : Application() {
                     println(line.substring(wraptLineStart))*/
                 }
             }
+            printIndices()
             output.add(line.substring(wraptLineStart, wraptLineEnd))
             wraptLineStart = wraptLineEnd
             wraptLineEnd = line.length
+            println("new endpoint: $wraptLineEnd")
         }
         return output
     }
