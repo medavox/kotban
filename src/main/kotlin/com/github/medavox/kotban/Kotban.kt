@@ -57,9 +57,7 @@ class Kotban : Application() {
 
             prefViewportWidthProperty().bind(root.widthProperty())
             isFitToHeight = true
-            val board = Board.loadFrom(dirFile)
-            primaryStage.title = board.name+" - Kotban"
-            content = layoutColumnContents(board.columns)
+            //content = layoutColumnContents(board.columns)
         }
 
         val mainButtonBar = ButtonBar().apply {
@@ -88,10 +86,11 @@ class Kotban : Application() {
         root.children.add(mainButtonBar)
         root.children.add(colScrol)
         primaryStage.scene = Scene(root, 600.0, 600.0)
-        primaryStage.show()
+        val board = Board.loadFrom(dirFile)
+        primaryStage.title = board.name+" - Kotban"
+        primaryStage.show()//stage must be shown before colscrol content is rendered, for some reason
+        colScrol.content = layoutColumnContents(board.columns)
 
-        val blus = (colScrol.content as HBox).children[0] as VBox
-        println("width: ${blus.width}")
     }
 
     /**Generates the UI component hierarchy for a single Note.*/
