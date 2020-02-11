@@ -12,8 +12,10 @@ import javafx.scene.input.ClipboardContent
 import javafx.scene.input.TransferMode
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
+import javafx.scene.text.Text
 import javafx.stage.Stage
 import java.io.File
+import kotlin.math.min
 
 
 //todo:
@@ -46,10 +48,13 @@ class Kotban : Application() {
     val dirFile = File(dir)
     private lateinit var contentContainer: ScrollPane
     val COLUMN_WIDTH = 300.0
+    //discovered through experimentation.
+    val SCROLLBAR_WIDTH = 22
     /*Instead of making entries editable (and effectively having to write our own text editor),
     * make each entry, upon being clicked, open itself in the user's choice of editor.
     * That allows us to focus on prettifying the Markdown */
     override fun start(primaryStage:Stage) {
+
         val root = VBox()
 
         val colScrol = ScrollPane().apply {//horizontal scrollpane for columns
@@ -90,7 +95,96 @@ class Kotban : Application() {
         primaryStage.title = board.name+" - Kotban"
         primaryStage.show()//stage must be shown before colscrol content is rendered, for some reason
         colScrol.content = layoutColumnContents(board.columns)
+    }
 
+    private fun getRowCount(textArea: TextArea):Int {
+        var currentRowCount = 0
+        val helper = Text()
+        // text needs to be on the scene
+        val text = Text(textArea.text)//textArea.lookup(".text") as Text? ?: return currentRowCount
+        /*
+         * Now we just count the paragraphs: If the paragraph size is less
+         * than the current wrappingWidth then increment; Otherwise use our
+         * Text helper instance to calculate the change in height for the
+         * current paragraph with "wrappingWidth" set to the actual
+         * wrappingWidth of the TextArea text
+         */
+        helper.font = textArea.font
+        for (paragraph:CharSequence in textArea.paragraphs) {
+            helper.text = paragraph.toString()
+            val localBounds: Bounds = helper.boundsInLocal
+
+            val paragraphWidth:Double = localBounds.width
+            currentRowCount += if(paragraphWidth <= text.wrappingWidth) 1 else {
+                val oldHeight:Double = localBounds.height
+                // this actually sets the automatic size adjustment into motion...
+                helper.wrappingWidth = text.wrappingWidth
+                val newHeight:Double = helper.boundsInLocal.height
+                // ...and we reset it after computation
+                helper.wrappingWidth = 0.0;
+
+                (newHeight / oldHeight).toInt()
+            }
+        }
+        return currentRowCount
+    }
+
+    private fun estimateWordBoundaryIgnorantWrapping(fontMetrics: FontMetrics, line:String, maxWidthPx:Double):List<String> {
+        if(fontMetrics.computeStringWidth(line) <= maxWidthPx) return listOf(line)
+        val output = mutableListOf<String>()
+        var wraptLineStart = 0
+        var wraptLineEnd = line.length
+        while(wraptLineStart != line.length) {
+            while (fontMetrics.computeStringWidth(line.substring(wraptLineStart, wraptLineEnd)) > maxWidthPx) {
+                wraptLineEnd--
+            }
+            output.add(line.substring(wraptLineStart, wraptLineEnd))
+            wraptLineStart = wraptLineEnd
+            wraptLineEnd = line.length
+        }
+        return output
+    }
+
+    private fun estimateWordBoundaryAwareWrapping(fontMetrics: FontMetrics, line:String, maxWidthPx:Double):List<String> {
+        if(fontMetrics.computeStringWidth(line) <= maxWidthPx) return listOf(line)
+        val output = mutableListOf<String>()
+        var wraptLineStart = 0
+        var wraptLineEnd = line.length
+        while(wraptLineStart != line.length) {
+            while (fontMetrics.computeStringWidth(line.substring(wraptLineStart, wraptLineEnd)) > maxWidthPx) {
+
+                val backTrackToWordBoundary = Regex("\\s").
+                    findAll(line.substring(wraptLineStart, wraptLineEnd)).lastOrNull()?.range
+                /*backTrackToWordBoundary?.run {
+                    println("RANGE first: $first; last: $last; start: $start; endInclusive: $endInclusive")
+                }*/
+                wraptLineEnd = backTrackToWordBoundary?.first ?: wraptLineEnd -1
+                println(line)
+                if(wraptLineStart < wraptLineEnd) {
+                    print(" ".repeat(wraptLineStart)+"^")
+                    println(" ".repeat(wraptLineEnd-(wraptLineStart+1) )+"^")
+                    print(" ".repeat(wraptLineStart)+"s")
+                    println(" ".repeat(wraptLineEnd-(wraptLineStart+1) )+"e")
+                }else {
+                    print(" ".repeat(wraptLineEnd)+"^")
+                    println(" ".repeat(wraptLineStart-(wraptLineEnd+1) )+"^")
+                    print(" ".repeat(wraptLineEnd)+"e")
+                    println(" ".repeat(wraptLineStart-(wraptLineEnd+1) )+"s")
+                }
+                if(wraptLineEnd <= wraptLineStart) {
+                    println("ABOUT TO FUCK UP! wraptStart: $wraptLineStart; wraptLineEnd: $wraptLineEnd; whole line:")
+
+/*                    println("until end marker:")
+                    println(line.substring(0, wraptLineEnd))
+                    println("from start marker:")
+                    println(line.substring(wraptLineStart))*/
+                }
+            }
+            output.add(line.substring(wraptLineStart, wraptLineEnd))
+            wraptLineStart = wraptLineEnd
+            wraptLineEnd = line.length
+        }
+        return output
     }
 
     /**Generates the UI component hierarchy for a single Note.*/
@@ -99,26 +193,39 @@ class Kotban : Application() {
         content = TextArea(note.contents).also { textArea ->
             textArea.isEditable=false
             textArea.isWrapText = true
+
+
             //DragResizerXY(this).makeResizable()
             //this is always 40 - it's not updated automatically by the TextArea's width
             //println("column count:"+textArea.prefColumnCount)
             val fontMetrics: FontMetrics = Toolkit.getToolkit().fontLoader.getFontMetrics(textArea.font)
             //manually work out how many rows our text needs
-            textArea.prefRowCount = textArea.text.split('\n', '\r').fold(1)
-                //todo: find better way to test for line breaks
-                //fold(textArea.text.count { it == '\n' || it == '\r' } + 1 )//no '\n's means there's 1 line
-                { acc: Int, line: String ->
+            //the actual bug seems to be:
+            //when the line is NEARLY as long as the pane is wide (detected in a width of 300, and a line which is reported as 290.4),
+            // even though it could technically fit.
+            // the line is wrapped anyway only when the text area's height is larger than one of its containers
+            println("\n\n\nNEW FILE\n\n\n")
+            val calcedRows = textArea.paragraphs.fold(1) { acc: Int, line: CharSequence ->
+
                     //add the number of times that the line is longer than the text area's width,
                     // to the number of preferred rows
-                    val lineWidth = fontMetrics.computeStringWidth(line)
+                    val lineWidth = fontMetrics.computeStringWidth(line.toString())
+                    //when reverse-engineering the wrapping, i'm not taking into account word boundaries
                     //fixme: dividing by the total column width doesn't take into account the horizontal space lost to the column's scroll bar
-                    val linesWhenWrapped:Int = (lineWidth / COLUMN_WIDTH).toInt() +1 //a line which isn't as long as the full column width still counts as a line!
-                    /*if(linesWhenWrapped > 0)*/ println("line width: $lineWidth")
-                    println("lines when wrapped: $linesWhenWrapped")
-                    //this get the maximum number of characters that fit in a single line
+                    val linesWhenWrapped:Int = (lineWidth / (COLUMN_WIDTH-18)).toInt() +1 //a line which isn't as long as the full column width still counts as a line!
+/*                    if(line.isNotEmpty()) {
+                        print("line \"${line.substring(0, min(line.length, 10))}\"... ")
+                    }else print("empty line ")
+                    println("width: $lineWidth; wrapped lines: $linesWhenWrapped")*/
+                    if(line.isNotEmpty()) {
+                        println(">:")
+                        estimateWordBoundaryAwareWrapping(fontMetrics, line.toString(), COLUMN_WIDTH).forEach{println(it)}
+                    }
                     acc + linesWhenWrapped
                 }
-            println("\"${note.title}\" pref rows:"+textArea.prefRowCount+"; max height: "+textArea.maxHeight)
+            textArea.prefHeight = calcedRows.toDouble() * (fontMetrics.lineHeight + 1.25/*Calculated through sheer fucking trial and error.*/)
+            println("\t\"${note.title}\" calced rows: $calcedRows; pref height: "+textArea.prefHeight)
+
             //val length = fontMetrics.computeStringWidth(textArea.text)
             //println("\'${note.title}\' height: ${it.height}; prefHeight:${it.prefHeight}")
         }
