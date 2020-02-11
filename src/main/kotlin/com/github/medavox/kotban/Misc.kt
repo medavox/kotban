@@ -30,7 +30,8 @@ fun openInDefaultTextEditor(file:File) {
         val cmd = "rundll32 url.dll,FileProtocolHandler " + file.canonicalPath
         Runtime.getRuntime().exec(cmd)
     } else {
-        Desktop.getDesktop().edit(file)
+        //Desktop.getDesktop().edit(file)
+        DesktopApi.edit(file)
     }
 }
 
