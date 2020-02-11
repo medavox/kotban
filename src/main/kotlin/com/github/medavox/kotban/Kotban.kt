@@ -171,16 +171,17 @@ class Kotban : Application() {
                     //this.autosize()
                     //prefHeightProperty().bind()
                 },
-            ButtonBar().also{ butts ->
-                butts.buttons.addAll(Button("New Note").apply {setOnAction {
-                    promptForFileName(false, column.folder,
-                        "Name of new note:", "new note.txt"
-                    )?.let {
-                        it.createNewFile()
-                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
-                    }
-                }})
-            })
+                ButtonBar().also{ butts ->
+                    butts.buttons.addAll(Button("New Note").apply {setOnAction {
+                        promptForFileName(false, column.folder,
+                            "Name of new note:", "new note.txt"
+                        )?.let {
+                            it.createNewFile()
+                            contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+                        }
+                    }})
+                }
+            )
         }
         colContainer.children.add(columnButtonBar)
         colContainer.children.add(ScrollPane().also { notesScrollPane ->
@@ -192,9 +193,11 @@ class Kotban : Application() {
                     // so notes can be dragged into them
                     prefHeightProperty().bind(contentContainer.heightProperty().
                         subtract(columnButtonBar.heightProperty()))
-                    //but never show scroll bars
                     notesScrollPane.vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
+                }else {
+                    notesScrollPane.vbarPolicy = ScrollPane.ScrollBarPolicy.ALWAYS
                 }
+                notesScrollPane.hbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
                 onDragOver = EventHandler { event ->
                     /* accept only if it's not dragged from the same node,
                          * and if it has a File as data */
