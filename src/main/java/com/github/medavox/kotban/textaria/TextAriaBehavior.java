@@ -158,12 +158,12 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
                         final Bounds bounds = textArea.getBoundsInParent();
                         double w = bounds.getWidth();
                         double h = bounds.getHeight();
-                        Affine3D trans = TextFieldBehavior.calculateNodeToSceneTransform(textArea);
+                        Affine3D trans = Utils.calculateNodeToSceneTransform(textArea);
                         String text = textArea.textProperty().getValueSafe();
 
                         // we need to display native text input component on the place where JFX component is drawn
                         // all parameters needed to do that are passed to native impl. here
-                        textArea.getScene().getWindow().impl_getPeer().requestInput(text, TextFieldBehavior.TextInputTypes.TEXT_AREA.ordinal(), w, h,
+                        textArea.getScene().getWindow().impl_getPeer().requestInput(text, Utils.TextInputTypes.TEXT_AREA.ordinal(), w, h,
                                 trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
                                 trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
                                 trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());

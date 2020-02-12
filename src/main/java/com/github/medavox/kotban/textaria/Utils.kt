@@ -1,8 +1,10 @@
 package com.github.medavox.kotban.textaria
 
+import com.sun.javafx.geom.transform.Affine3D
 import com.sun.javafx.scene.text.HitInfo
 import com.sun.javafx.scene.text.TextLayout
 import com.sun.javafx.tk.Toolkit
+import javafx.scene.Node
 import javafx.scene.text.Font
 import javafx.scene.text.TextBoundsType
 import java.text.BreakIterator
@@ -93,7 +95,7 @@ object Utils {
     }
 
     // Workaround for RT-26961. HitInfo.getInsertionIndex() doesn't skip
-// complex character clusters / ligatures.
+    // complex character clusters / ligatures.
     private var charIterator: BreakIterator? = null
     @JvmStatic
     fun getHitInsertionIndex(hit: HitInfo, text: String?): Int {
@@ -111,5 +113,26 @@ object Utils {
             }
         }
         return charIndex
+    }
+
+    @JvmStatic
+    fun calculateNodeToSceneTransform(nod: Node?): Affine3D {
+        var node = nod
+        val transform = Affine3D()
+        do {
+            transform.preConcatenate(node!!.impl_getLeafTransform())
+            node = node.parent
+        } while (node != null)
+        return transform
+    }
+
+    /** Enumeration of all types of text input that can be simulated on
+    touch device, such as iPad. Type is passed to native code and
+    native text component is shown. It's used as workaround for iOS
+    devices since keyboard control is not possible without native
+    text component being displayed
+     */
+    internal enum class TextInputTypes {
+        TEXT_FIELD, PASSWORD_FIELD, EDITABLE_COMBO, TEXT_AREA
     }
 }
