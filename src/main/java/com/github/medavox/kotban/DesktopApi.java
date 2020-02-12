@@ -11,37 +11,28 @@ import java.util.List;
 public class DesktopApi {
 
     public static boolean browse(URI uri) {
-
         if (openSystemSpecific(uri.toString())) return true;
-
         return browseDESKTOP(uri);
     }
 
 
     public static boolean open(File file) {
-
         if (openSystemSpecific(file.getPath())) return true;
-
         return openDESKTOP(file);
     }
 
 
     public static boolean edit(File file) {
-
         // you can try something like
         // runCommand("gimp", "%s", file.getPath())
         // based on user preferences.
-
         if (openSystemSpecific(file.getPath())) return true;
-
         return editDESKTOP(file);
     }
 
 
     private static boolean openSystemSpecific(String what) {
-
         EnumOS os = getOs();
-
         if (os.isLinux()) {
             if (runCommand("kde-open", "%s", what)) return true;
             if (runCommand("gnome-open", "%s", what)) return true;
@@ -55,13 +46,11 @@ public class DesktopApi {
         if (os.isWindows()) {
             if (runCommand("explorer", "%s", what)) return true;
         }
-
         return false;
     }
 
 
     private static boolean browseDESKTOP(URI uri) {
-
         logOut("Trying to use Desktop.getDesktop().browse() with " + uri.toString());
         try {
             if (!Desktop.isDesktopSupported()) {
@@ -85,7 +74,6 @@ public class DesktopApi {
 
 
     private static boolean openDESKTOP(File file) {
-
         logOut("Trying to use Desktop.getDesktop().open() with " + file.toString());
         try {
             if (!Desktop.isDesktopSupported()) {
@@ -109,7 +97,6 @@ public class DesktopApi {
 
 
     private static boolean editDESKTOP(File file) {
-
         logOut("Trying to use Desktop.getDesktop().edit() with " + file);
         try {
             if (!Desktop.isDesktopSupported()) {
@@ -123,7 +110,6 @@ public class DesktopApi {
             }
 
             Desktop.getDesktop().edit(file);
-
             return true;
         } catch (Throwable t) {
             logErr("Error using desktop edit.", t);
@@ -133,9 +119,7 @@ public class DesktopApi {
 
 
     private static boolean runCommand(String command, String args, String file) {
-
         logOut("Trying to exec:\n   cmd = " + command + "\n   args = " + args + "\n   %s = " + file);
-
         String[] parts = prepareCommand(command, args, file);
 
         try {
@@ -163,7 +147,6 @@ public class DesktopApi {
 
 
     private static String[] prepareCommand(String command, String args, String file) {
-
         List<String> parts = new ArrayList<String>();
         parts.add(command);
 
@@ -195,26 +178,22 @@ public class DesktopApi {
         linux, macos, solaris, unknown, windows;
 
         public boolean isLinux() {
-
             return this == linux || this == solaris;
         }
 
 
         public boolean isMac() {
-
             return this == macos;
         }
 
 
         public boolean isWindows() {
-
             return this == windows;
         }
     }
 
 
     public static EnumOS getOs() {
-
         String s = System.getProperty("os.name").toLowerCase();
 
         if (s.contains("win")) {
