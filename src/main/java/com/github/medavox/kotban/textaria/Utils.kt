@@ -23,8 +23,7 @@ object Utils {
      *
      * Note: This code assumes that TextBoundsType#VISUAL is never used by controls.
      * */
-    val layout =
-        Toolkit.getToolkit().textLayoutFactory.createLayout()
+    val layout = Toolkit.getToolkit().textLayoutFactory.createLayout()
     @JvmStatic
     fun getAscent(font: Font, boundsType: TextBoundsType): Double {
         layout.setContent("", font.impl_getNativeFont())

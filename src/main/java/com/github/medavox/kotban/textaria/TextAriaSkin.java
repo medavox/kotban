@@ -88,6 +88,29 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
         computedPrefHeight = Double.NEGATIVE_INFINITY;
     }
 
+    public double getTaeFuck(double width) {
+        double wrappingWidth;
+        if (width == -1) {
+            wrappingWidth = 0;
+        } else {
+            wrappingWidth = Math.max(width - (snappedLeftInset() + snappedRightInset()), 0);
+        }
+
+        double prefHeight = 0;
+
+        for (Node node : paragraphNodes.getChildren()) {
+            Text paragraphNode = (Text)node;
+            prefHeight += Utils.computeTextHeight(
+                    paragraphNode.getFont(),
+                    paragraphNode.getText(),
+                    wrappingWidth,
+                    paragraphNode.getBoundsType());
+        }
+
+        prefHeight += snappedTopInset() + snappedBottomInset();
+        return prefHeight;
+    }
+
     private class ContentView extends Region {
         {
             getStyleClass().add("content");
@@ -439,6 +462,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
         scrollPane.setFitToWidth(textArea.isWrapText());
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
         getSkinnable().addEventFilter(ScrollEvent.ANY, event -> {
             if (event.isDirect() && handlePressed) {

@@ -348,7 +348,7 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
                     // When the drag concludes, then we handle the click
 
                     deferClick = true;
-                    // TODO start a timer such that after some millis we
+                    //TODO start a timer such that after some millis we
                     // switch into text dragging mode, change the cursor
                     // to indicate the text can be dragged, etc.
                 } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown() || e.isShortcutDown())) {

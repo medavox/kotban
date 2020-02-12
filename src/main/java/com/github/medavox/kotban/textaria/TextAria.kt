@@ -4,13 +4,11 @@ import com.sun.javafx.scene.control.skin.TextAreaSkin
 import javafx.scene.control.Skin
 import javafx.scene.control.TextArea
 
-class TextAria : TextArea() {
+class TextAria(text:String) : TextArea(text) {
+    private val taSkin:TextAriaSkin = TextAriaSkin(this)
     override fun createDefaultSkin(): Skin<*> {
-        return OverrideSkin(this)
+        return taSkin
     }
-    private inner class OverrideSkin(ta:TextArea):TextAreaSkin(ta) {
-        override fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
-            super.layoutChildren(contentX, contentY, contentWidth, contentHeight)
-        }
-    }
+
+    fun getTaeFuck(width:Double):Double = taSkin.getTaeFuck(width)
 }
