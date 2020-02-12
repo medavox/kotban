@@ -239,10 +239,6 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
             else if ("SelectParagraphStart".equals(name)) skin.paragraphStart(true, true);
             else if ("SelectParagraphEnd".equals(name)) skin.paragraphEnd(true, isWindows(), true);
 
-            else if ("PreviousPage".equals(name)) skin.previousPage(false);
-            else if ("NextPage".equals(name)) skin.nextPage(false);
-            else if ("SelectPreviousPage".equals(name)) skin.previousPage(true);
-            else if ("SelectNextPage".equals(name)) skin.nextPage(true);
             else if ("TraverseOrInsertTab".equals(name)) {
                 // RT-40312: Non-editabe mode means traverse instead of insert.
                 name = "TraverseNext";

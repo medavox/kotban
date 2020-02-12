@@ -152,8 +152,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
 
                 prefWidth += snappedLeftInset() + snappedRightInset();
 
-                Bounds viewPortBounds = scrollPane.getViewportBounds();
-                computedPrefWidth = Math.max(prefWidth, (viewPortBounds != null) ? viewPortBounds.getWidth() : 0);
+                computedPrefWidth = prefWidth;
             }
             return computedPrefWidth;
         }
@@ -186,8 +185,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
 
                 prefHeight += snappedTopInset() + snappedBottomInset();
 
-                Bounds viewPortBounds = scrollPane.getViewportBounds();
-                computedPrefHeight = Math.max(prefHeight, (viewPortBounds != null) ? viewPortBounds.getHeight() : 0);
+                computedPrefHeight = prefHeight;
             }
             return computedPrefHeight;
         }
@@ -367,30 +365,15 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
                 }
             }
 
-            if (scrollPane.getPrefViewportWidth() == 0
-                    || scrollPane.getPrefViewportHeight() == 0) {
+            if (contentView.getPrefWidth() == 0
+                    || contentView.getPrefHeight() == 0) {
                 updatePrefViewportWidth();
                 updatePrefViewportHeight();
-                if (getParent() != null && scrollPane.getPrefViewportWidth() > 0
-                        || scrollPane.getPrefViewportHeight() > 0) {
+                if (getParent() != null && contentView.getPrefWidth() > 0
+                        || contentView.getPrefHeight() > 0) {
                     // Force layout of viewRect in ScrollPaneSkin
                     getParent().requestLayout();
                 }
-            }
-
-            // RT-36454: Fit to width/height only if smaller than viewport.
-            // That is, grow to fit but don't shrink to fit.
-            Bounds viewportBounds = scrollPane.getViewportBounds();
-            boolean wasFitToWidth = scrollPane.isFitToWidth();
-            boolean wasFitToHeight = scrollPane.isFitToHeight();
-            boolean setFitToWidth = textArea.isWrapText() || computePrefWidth(-1) <= viewportBounds.getWidth();
-            boolean setFitToHeight = computePrefHeight(width) <= viewportBounds.getHeight();
-            if (wasFitToWidth != setFitToWidth || wasFitToHeight != setFitToHeight) {
-                Platform.runLater(() -> {
-                    scrollPane.setFitToWidth(setFitToWidth);
-                    scrollPane.setFitToHeight(setFitToHeight);
-                });
-                getParent().requestLayout();
             }
         }
     }
@@ -404,7 +387,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
     private ObservableIntegerValue caretPosition;
     private Group selectionHighlightGroup = new Group();
 
-    private ScrollPane scrollPane;
     private Bounds oldViewportBounds;
 
     private VerticalDirection scrollDirection = null;
@@ -458,11 +440,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
 //        setManaged(false);
 
         // Initialize content
-        scrollPane = new ScrollPane();
-        scrollPane.setFitToWidth(textArea.isWrapText());
-        scrollPane.setContent(contentView);
-        getChildren().add(scrollPane);
-        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        getChildren().add(contentView);
 
         getSkinnable().addEventFilter(ScrollEvent.ANY, event -> {
             if (event.isDirect() && handlePressed) {
@@ -498,14 +476,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
             contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
         }
 
-        scrollPane.hvalueProperty().addListener((observable, oldValue, newValue) -> {
-            getSkinnable().setScrollLeft(newValue.doubleValue() * getScrollLeftMax());
-        });
-
-        scrollPane.vvalueProperty().addListener((observable, oldValue, newValue) -> {
-            getSkinnable().setScrollTop(newValue.doubleValue() * getScrollTopMax());
-        });
-
         // Initialize the scroll selection timeline
         scrollSelectionTimeline.setCycleCount(Timeline.INDEFINITE);
         List<KeyFrame> scrollSelectionFrames = scrollSelectionTimeline.getKeyFrames();
@@ -526,7 +496,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
 
         textArea.wrapTextProperty().addListener((observable, oldValue, newValue) -> {
             invalidateMetrics();
-            scrollPane.setFitToWidth(newValue);
         });
 
         textArea.prefColumnCountProperty().addListener((observable, oldValue, newValue) -> {
@@ -547,35 +516,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
         contentView.paddingProperty().addListener(valueModel -> {
             updatePrefViewportWidth();
             updatePrefViewportHeight();
-        });
-
-        scrollPane.viewportBoundsProperty().addListener(valueModel -> {
-            if (scrollPane.getViewportBounds() != null) {
-                // ScrollPane creates a new Bounds instance for each
-                // layout pass, so we need to check if the width/height
-                // have really changed to avoid infinite layout requests.
-                Bounds newViewportBounds = scrollPane.getViewportBounds();
-                if (oldViewportBounds == null ||
-                        oldViewportBounds.getWidth() != newViewportBounds.getWidth() ||
-                        oldViewportBounds.getHeight() != newViewportBounds.getHeight()) {
-
-                    invalidateMetrics();
-                    oldViewportBounds = newViewportBounds;
-                    contentView.requestLayout();
-                }
-            }
-        });
-
-        textArea.scrollTopProperty().addListener((observable, oldValue, newValue) -> {
-            double vValue = (newValue.doubleValue() < getScrollTopMax())
-                    ? (newValue.doubleValue() / getScrollTopMax()) : 1.0;
-            scrollPane.setVvalue(vValue);
-        });
-
-        textArea.scrollLeftProperty().addListener((observable, oldValue, newValue) -> {
-            double hValue = (newValue.doubleValue() < getScrollLeftMax())
-                    ? (newValue.doubleValue() / getScrollLeftMax()) : 1.0;
-            scrollPane.setHvalue(hValue);
         });
 
         if (USE_MULTIPLE_NODES) {
@@ -743,7 +683,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
 
     @Override
     protected void layoutChildren(double contentX, double contentY, double contentWidth, double contentHeight) {
-        scrollPane.resizeRelocate(contentX, contentY, contentWidth, contentHeight);
+        contentView.resizeRelocate(contentX, contentY, contentWidth, contentHeight);
     }
 
     private void createPromptNode() {
@@ -882,14 +822,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
         setForwardBias(hit.isLeading());
     }
 
-    private double getScrollTopMax() {
-        return Math.max(0, contentView.getHeight() - scrollPane.getViewportBounds().getHeight());
-    }
-
-    private double getScrollLeftMax() {
-        return Math.max(0, contentView.getWidth() - scrollPane.getViewportBounds().getWidth());
-    }
-
     private int getInsertionPoint(Text paragraphNode, double x, double y) {
         HitInfo hitInfo = paragraphNode.impl_hitTestChar(new Point2D(x, y));
         return Utils.getHitInsertionIndex(hitInfo, paragraphNode.getText());
@@ -950,7 +882,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
     }
 
     @Override public void scrollCharacterToVisible(final int index) {
-        // TODO We queue a callback because when characters are added or
+        //TODO We queue a callback because when characters are added or
         // removed the bounds are not immediately updated; is this really
         // necessary?
 
@@ -959,7 +891,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
                 return;
             }
             Rectangle2D characterBounds = getCharacterBounds(index);
-            scrollBoundsToVisible(characterBounds);
         });
     }
 
@@ -981,62 +912,18 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
                 h += selectionHandle1.getHeight() + selectionHandle2.getHeight();
             }
         }
-
-        if (w > 0 && h > 0) {
-            scrollBoundsToVisible(new Rectangle2D(x, y, w, h));
-        }
-    }
-
-    private void scrollBoundsToVisible(Rectangle2D bounds) {
-        TextAria textArea = getSkinnable();
-        Bounds viewportBounds = scrollPane.getViewportBounds();
-
-        double viewportWidth = viewportBounds.getWidth();
-        double viewportHeight = viewportBounds.getHeight();
-        double scrollTop = textArea.getScrollTop();
-        double scrollLeft = textArea.getScrollLeft();
-        double slop = 6.0;
-
-        if (bounds.getMinY() < 0) {
-            double y = scrollTop + bounds.getMinY();
-            if (y <= contentView.snappedTopInset()) {
-                y = 0;
-            }
-            textArea.setScrollTop(y);
-        } else if (contentView.snappedTopInset() + bounds.getMaxY() > viewportHeight) {
-            double y = scrollTop + contentView.snappedTopInset() + bounds.getMaxY() - viewportHeight;
-            if (y >= getScrollTopMax() - contentView.snappedBottomInset()) {
-                y = getScrollTopMax();
-            }
-            textArea.setScrollTop(y);
-        }
-
-
-        if (bounds.getMinX() < 0) {
-            double x = scrollLeft + bounds.getMinX() - slop;
-            if (x <= contentView.snappedLeftInset() + slop) {
-                x = 0;
-            }
-            textArea.setScrollLeft(x);
-        } else if (contentView.snappedLeftInset() + bounds.getMaxX() > viewportWidth) {
-            double x = scrollLeft + contentView.snappedLeftInset() + bounds.getMaxX() - viewportWidth + slop;
-            if (x >= getScrollLeftMax() - contentView.snappedRightInset() - slop) {
-                x = getScrollLeftMax();
-            }
-            textArea.setScrollLeft(x);
-        }
     }
 
     private void updatePrefViewportWidth() {
         int columnCount = getSkinnable().getPrefColumnCount();
-        scrollPane.setPrefViewportWidth(columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
-        scrollPane.setMinViewportWidth(characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
+        contentView.setPrefWidth(columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
+        contentView.setMinWidth(characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
     }
 
     private void updatePrefViewportHeight() {
         int rowCount = getSkinnable().getPrefRowCount();
-        scrollPane.setPrefViewportHeight(rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
-        scrollPane.setMinViewportHeight(lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
+        contentView.setPrefHeight(rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
+        contentView.setMinHeight(lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
     }
 
     private void updateFontMetrics() {
@@ -1221,16 +1108,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
 
     public void nextLine(boolean select) {
         downLines(1, select, false);
-    }
-
-    public void previousPage(boolean select) {
-        downLines(-(int)(scrollPane.getViewportBounds().getHeight() / lineHeight),
-                select, false);
-    }
-
-    public void nextPage(boolean select) {
-        downLines((int)(scrollPane.getViewportBounds().getHeight() / lineHeight),
-                select, false);
     }
 
     public void lineStart(boolean select, boolean extendSelection) {
