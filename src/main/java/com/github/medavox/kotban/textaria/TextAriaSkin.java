@@ -38,9 +38,11 @@ import javafx.beans.binding.IntegerBinding;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableIntegerValue;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
+import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
@@ -48,9 +50,11 @@ import javafx.geometry.VerticalDirection;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.Region;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
@@ -84,7 +88,291 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
         computedPrefHeight = Double.NEGATIVE_INFINITY;
     }
 
-    private ContentView contentView = new ContentView(this);
+    private class ContentView extends Region {
+        {
+            getStyleClass().add("content");
+
+            addEventHandler(MouseEvent.MOUSE_PRESSED, event -> {
+                getBehavior().mousePressed(event);
+                event.consume();
+            });
+
+            addEventHandler(MouseEvent.MOUSE_RELEASED, event -> {
+                getBehavior().mouseReleased(event);
+                event.consume();
+            });
+
+            addEventHandler(MouseEvent.MOUSE_DRAGGED, event -> {
+                getBehavior().mouseDragged(event);
+                event.consume();
+            });
+        }
+
+        @Override protected ObservableList<Node> getChildren() {
+            return super.getChildren();
+        }
+
+        @Override public Orientation getContentBias() {
+            return Orientation.HORIZONTAL;
+        }
+
+        @Override protected double computePrefWidth(double height) {
+            if (computedPrefWidth < 0) {
+                double prefWidth = 0;
+
+                for (Node node : paragraphNodes.getChildren()) {
+                    Text paragraphNode = (Text)node;
+                    prefWidth = Math.max(prefWidth,
+                            Utils.computeTextWidth(paragraphNode.getFont(),
+                                    paragraphNode.getText(), 0));
+                }
+
+                prefWidth += snappedLeftInset() + snappedRightInset();
+
+                Bounds viewPortBounds = scrollPane.getViewportBounds();
+                computedPrefWidth = Math.max(prefWidth, (viewPortBounds != null) ? viewPortBounds.getWidth() : 0);
+            }
+            return computedPrefWidth;
+        }
+
+        @Override
+        protected double computePrefHeight(double width) {
+            if (width != widthForComputedPrefHeight) {
+                invalidateMetrics();
+                widthForComputedPrefHeight = width;
+            }
+
+            if (computedPrefHeight < 0) {
+                double wrappingWidth;
+                if (width == -1) {
+                    wrappingWidth = 0;
+                } else {
+                    wrappingWidth = Math.max(width - (snappedLeftInset() + snappedRightInset()), 0);
+                }
+
+                double prefHeight = 0;
+
+                for (Node node : paragraphNodes.getChildren()) {
+                    Text paragraphNode = (Text)node;
+                    prefHeight += Utils.computeTextHeight(
+                            paragraphNode.getFont(),
+                            paragraphNode.getText(),
+                            wrappingWidth,
+                            paragraphNode.getBoundsType());
+                }
+
+                prefHeight += snappedTopInset() + snappedBottomInset();
+
+                Bounds viewPortBounds = scrollPane.getViewportBounds();
+                computedPrefHeight = Math.max(prefHeight, (viewPortBounds != null) ? viewPortBounds.getHeight() : 0);
+            }
+            return computedPrefHeight;
+        }
+
+        @Override protected double computeMinWidth(double height) {
+            if (computedMinWidth < 0) {
+                double hInsets = snappedLeftInset() + snappedRightInset();
+                computedMinWidth = Math.min(characterWidth + hInsets, computePrefWidth(height));
+            }
+            return computedMinWidth;
+        }
+
+        @Override protected double computeMinHeight(double width) {
+            if (computedMinHeight < 0) {
+                double vInsets = snappedTopInset() + snappedBottomInset();
+                computedMinHeight = Math.min(lineHeight + vInsets, computePrefHeight(width));
+            }
+            return computedMinHeight;
+        }
+
+        @Override
+        public void layoutChildren() {
+            TextAria textArea = getSkinnable();
+            double width = getWidth();
+
+            // Lay out paragraphs
+            final double topPadding = snappedTopInset();
+            final double leftPadding = snappedLeftInset();
+
+            double wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0);
+
+            double y = topPadding;
+
+            final List<Node> paragraphNodesChildren = paragraphNodes.getChildren();
+
+            for (int i = 0; i < paragraphNodesChildren.size(); i++) {
+                Node node = paragraphNodesChildren.get(i);
+                Text paragraphNode = (Text)node;
+                paragraphNode.setWrappingWidth(wrappingWidth);
+
+                Bounds bounds = paragraphNode.getBoundsInLocal();
+                paragraphNode.setLayoutX(leftPadding);
+                paragraphNode.setLayoutY(y);
+
+                y += bounds.getHeight();
+            }
+
+            if (promptNode != null) {
+                promptNode.setLayoutX(leftPadding);
+                promptNode.setLayoutY(topPadding + promptNode.getBaselineOffset());
+                promptNode.setWrappingWidth(wrappingWidth);
+            }
+
+            // Update the selection
+            IndexRange selection = textArea.getSelection();
+            Bounds oldCaretBounds = caretPath.getBoundsInParent();
+
+            selectionHighlightGroup.getChildren().clear();
+
+            int caretPos = textArea.getCaretPosition();
+            int anchorPos = textArea.getAnchor();
+
+            if (SHOW_HANDLES) {
+                // Install and resize the handles for caret and anchor.
+                if (selection.getLength() > 0) {
+                    selectionHandle1.resize(selectionHandle1.prefWidth(-1),
+                            selectionHandle1.prefHeight(-1));
+                    selectionHandle2.resize(selectionHandle2.prefWidth(-1),
+                            selectionHandle2.prefHeight(-1));
+                } else {
+                    caretHandle.resize(caretHandle.prefWidth(-1),
+                            caretHandle.prefHeight(-1));
+                }
+
+                // Position the handle for the anchor. This could be handle1 or handle2.
+                // Do this before positioning the actual caret.
+                if (selection.getLength() > 0) {
+                    int paragraphIndex = paragraphNodesChildren.size();
+                    int paragraphOffset = textArea.getLength() + 1;
+                    Text paragraphNode = null;
+                    do {
+                        paragraphNode = (Text)paragraphNodesChildren.get(--paragraphIndex);
+                        paragraphOffset -= paragraphNode.getText().length() + 1;
+                    } while (anchorPos < paragraphOffset);
+
+                    updateTextNodeCaretPos(anchorPos - paragraphOffset);
+                    caretPath.getElements().clear();
+                    caretPath.getElements().addAll(paragraphNode.getImpl_caretShape());
+                    caretPath.setLayoutX(paragraphNode.getLayoutX());
+                    caretPath.setLayoutY(paragraphNode.getLayoutY());
+
+                    Bounds b = caretPath.getBoundsInParent();
+                    if (caretPos < anchorPos) {
+                        selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2);
+                        selectionHandle2.setLayoutY(b.getMaxY() - 1);
+                    } else {
+                        selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
+                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1);
+                    }
+                }
+            }
+
+            {
+                // Position caret
+                int paragraphIndex = paragraphNodesChildren.size();
+                int paragraphOffset = textArea.getLength() + 1;
+
+                Text paragraphNode = null;
+                do {
+                    paragraphNode = (Text)paragraphNodesChildren.get(--paragraphIndex);
+                    paragraphOffset -= paragraphNode.getText().length() + 1;
+                } while (caretPos < paragraphOffset);
+
+                updateTextNodeCaretPos(caretPos - paragraphOffset);
+
+                caretPath.getElements().clear();
+                caretPath.getElements().addAll(paragraphNode.getImpl_caretShape());
+
+                caretPath.setLayoutX(paragraphNode.getLayoutX());
+
+                // TODO: Remove this temporary workaround for RT-27533
+                paragraphNode.setLayoutX(2 * paragraphNode.getLayoutX() - paragraphNode.getBoundsInParent().getMinX());
+
+                caretPath.setLayoutY(paragraphNode.getLayoutY());
+                if (oldCaretBounds == null || !oldCaretBounds.equals(caretPath.getBoundsInParent())) {
+                    scrollCaretToVisible();
+                }
+            }
+
+            // Update selection fg and bg
+            int start = selection.getStart();
+            int end = selection.getEnd();
+            for (int i = 0, max = paragraphNodesChildren.size(); i < max; i++) {
+                Node paragraphNode = paragraphNodesChildren.get(i);
+                Text textNode = (Text)paragraphNode;
+                int paragraphLength = textNode.getText().length() + 1;
+                if (end > start && start < paragraphLength) {
+                    textNode.setImpl_selectionStart(start);
+                    textNode.setImpl_selectionEnd(Math.min(end, paragraphLength));
+
+                    Path selectionHighlightPath = new Path();
+                    selectionHighlightPath.setManaged(false);
+                    selectionHighlightPath.setStroke(null);
+                    PathElement[] selectionShape = textNode.getImpl_selectionShape();
+                    if (selectionShape != null) {
+                        selectionHighlightPath.getElements().addAll(selectionShape);
+                    }
+                    selectionHighlightGroup.getChildren().add(selectionHighlightPath);
+                    selectionHighlightGroup.setVisible(true);
+                    selectionHighlightPath.setLayoutX(textNode.getLayoutX());
+                    selectionHighlightPath.setLayoutY(textNode.getLayoutY());
+                    updateHighlightFill();
+                } else {
+                    textNode.setImpl_selectionStart(-1);
+                    textNode.setImpl_selectionEnd(-1);
+                    selectionHighlightGroup.setVisible(false);
+                }
+                start = Math.max(0, start - paragraphLength);
+                end   = Math.max(0, end   - paragraphLength);
+            }
+
+            if (SHOW_HANDLES) {
+                // Position handle for the caret. This could be handle1 or handle2 when
+                // a selection is active.
+                Bounds b = caretPath.getBoundsInParent();
+                if (selection.getLength() > 0) {
+                    if (caretPos < anchorPos) {
+                        selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
+                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1);
+                    } else {
+                        selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2);
+                        selectionHandle2.setLayoutY(b.getMaxY() - 1);
+                    }
+                } else {
+                    caretHandle.setLayoutX(b.getMinX() - caretHandle.getWidth() / 2 + 1);
+                    caretHandle.setLayoutY(b.getMaxY());
+                }
+            }
+
+            if (scrollPane.getPrefViewportWidth() == 0
+                    || scrollPane.getPrefViewportHeight() == 0) {
+                updatePrefViewportWidth();
+                updatePrefViewportHeight();
+                if (getParent() != null && scrollPane.getPrefViewportWidth() > 0
+                        || scrollPane.getPrefViewportHeight() > 0) {
+                    // Force layout of viewRect in ScrollPaneSkin
+                    getParent().requestLayout();
+                }
+            }
+
+            // RT-36454: Fit to width/height only if smaller than viewport.
+            // That is, grow to fit but don't shrink to fit.
+            Bounds viewportBounds = scrollPane.getViewportBounds();
+            boolean wasFitToWidth = scrollPane.isFitToWidth();
+            boolean wasFitToHeight = scrollPane.isFitToHeight();
+            boolean setFitToWidth = textArea.isWrapText() || computePrefWidth(-1) <= viewportBounds.getWidth();
+            boolean setFitToHeight = computePrefHeight(width) <= viewportBounds.getHeight();
+            if (wasFitToWidth != setFitToWidth || wasFitToHeight != setFitToHeight) {
+                Platform.runLater(() -> {
+                    scrollPane.setFitToWidth(setFitToWidth);
+                    scrollPane.setFitToHeight(setFitToHeight);
+                });
+                getParent().requestLayout();
+            }
+        }
+    }
+
+    private ContentView contentView = new ContentView();
     private Group paragraphNodes = new Group();
 
     private Text promptNode;
