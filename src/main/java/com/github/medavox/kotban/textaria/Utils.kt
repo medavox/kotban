@@ -1,4 +1,4 @@
-package com.github.medavox.kotban
+package com.github.medavox.kotban.textaria
 
 import com.sun.javafx.scene.text.HitInfo
 import com.sun.javafx.scene.text.TextLayout
@@ -65,7 +65,13 @@ object Utils {
         wrappingWidth: Double,
         boundsType: TextBoundsType
     ): Double {
-        return computeTextHeight(font, text, wrappingWidth, 0.0, boundsType)
+        return computeTextHeight(
+            font,
+            text,
+            wrappingWidth,
+            0.0,
+            boundsType
+        )
     }
     @JvmStatic
     fun computeTextHeight(

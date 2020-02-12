@@ -23,13 +23,11 @@
  *
  */
 
-package com.github.medavox.kotban
+package com.github.medavox.kotban.textaria
 
 import com.sun.javafx.scene.control.behavior.KeyBinding
 import com.sun.javafx.scene.control.behavior.OptionalBoolean
-import javafx.application.ConditionalFeature
 import com.sun.javafx.PlatformUtil
-import com.sun.javafx.application.PlatformImpl
 
 import javafx.scene.input.KeyCode.*
 import javafx.scene.input.KeyEvent.*

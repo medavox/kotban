@@ -1,4 +1,4 @@
-package com.github.medavox.kotban
+package com.github.medavox.kotban.textaria
 
 import com.sun.javafx.scene.control.skin.TextAreaSkin
 import javafx.scene.control.Skin

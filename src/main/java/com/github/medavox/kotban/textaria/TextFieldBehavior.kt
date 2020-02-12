@@ -1,4 +1,4 @@
-package com.github.medavox.kotban
+package com.github.medavox.kotban.textaria
 
 import com.sun.javafx.geom.transform.Affine3D
 import javafx.scene.Node

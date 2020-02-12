@@ -23,7 +23,7 @@
  *
  */
 
-package com.github.medavox.kotban;
+package com.github.medavox.kotban.textaria;
 
 import com.sun.javafx.scene.control.skin.TextInputControlSkin;
 
@@ -52,7 +52,6 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextArea;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;

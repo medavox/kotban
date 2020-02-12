@@ -23,7 +23,7 @@
  *
  */
 
-package com.github.medavox.kotban;
+package com.github.medavox.kotban.textaria;
 
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.transform.Affine3D;
