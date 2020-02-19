@@ -35,23 +35,19 @@ import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.IntegerBinding;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableIntegerValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Bounds;
-import javafx.geometry.Orientation;
-import javafx.geometry.Point2D;
-import javafx.geometry.Rectangle2D;
-import javafx.geometry.VPos;
-import javafx.geometry.VerticalDirection;
+import javafx.geometry.*;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.IndexRange;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
@@ -210,6 +206,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
         public void layoutChildren() {
             TextAria textArea = getSkinnable();
             double width = getWidth();
+            System.out.println("HERE width: "+width);
 
             // Lay out paragraphs
             final double topPadding = snappedTopInset();
@@ -218,6 +215,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
             double wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0);
 
             double y = topPadding;
+            System.out.println("HERE  snappedTopInset: "+y);
 
             final List<Node> paragraphNodesChildren = paragraphNodes.getChildren();
 
@@ -229,9 +227,13 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
                 Bounds bounds = paragraphNode.getBoundsInLocal();
                 paragraphNode.setLayoutX(leftPadding);
                 paragraphNode.setLayoutY(y);
-
                 y += bounds.getHeight();
             }
+
+            //notify as a property from here
+            System.out.println("HERE  contentView 'y': "+y);
+            System.out.println("HERE  textArea.prefHeight BEFORE: "+textArea.getPrefHeight());
+            hajt.set(y);
 
             if (promptNode != null) {
                 promptNode.setLayoutX(leftPadding);
@@ -365,8 +367,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
                 }
             }
 
-            if (contentView.getPrefWidth() == 0
-                    || contentView.getPrefHeight() == 0) {
+            if (contentView.getPrefWidth() == 0 || contentView.getPrefHeight() == 0) {
                 updatePrefViewportWidth();
                 updatePrefViewportHeight();
                 if (getParent() != null && contentView.getPrefWidth() > 0
@@ -376,9 +377,67 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
                 }
             }
         }
+
+        public DoubleProperty hajt = new DoublePropertyBase() {
+            @Override
+            public Object getBean() {
+                return null;
+            }
+
+            @Override
+            public String getName() {
+                return "my fucking height";
+            }
+        };
+
+        public DoubleBinding heightAttempt1 = new DoubleBinding() {
+            @Override
+            protected double computeValue() {
+                super.bind(prefWidthProperty());
+                //this is EXACTLY the same code as the section in contentView.layoutChildren() which produces correct results.
+                //this copy does not produce correct results: the snappedTopInset here is 0.0, and is 4.0 in contentView.
+                //the paragraph height is also significantly reduced, by an unpredictable factor, usually between 0.6 - 0.7,
+                //but also seen to be 0.3
+
+                //so the execution contexts must be different. The values from the called methods must different.
+                //how to get the result from layoutChildren() earlier?
+                //or at least re-layout the textArea when the correct values are available
+                double width = getWidth();
+                TextAria textArea = getSkinnable();
+                System.out.println("THERE width: "+width);
+
+                // Lay out paragraphs
+                final double topPadding = snappedTopInset();
+                final double leftPadding = snappedLeftInset();
+
+                double wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0);
+
+                double y = topPadding;
+                System.out.println("THERE snappedTopInset: "+y);
+
+                final List<Node> paragraphNodesChildren = paragraphNodes.getChildren();
+
+                for (int i = 0; i < paragraphNodesChildren.size(); i++) {
+                    Node node = paragraphNodesChildren.get(i);
+                    Text paragraphNode = (Text)node;
+                    paragraphNode.setWrappingWidth(wrappingWidth);
+
+                    Bounds bounds = paragraphNode.getBoundsInLocal();
+                    //System.out.println("THERE paragraph height: "+bounds.getHeight());
+                    //System.out.println("THERE chars in paragraph: "+paragraphNode.getText().length());
+                    y += bounds.getHeight();
+                }
+                //System.out.println("THERE contentView 'y': "+y);
+                //textArea.prefHeightProperty().bind(new SimpleDoubleProperty(y));
+                System.out.println("calculated binding value: "+y);
+                return y;
+                //return textArea.widthProperty();
+            }
+        };
     }
 
     private ContentView contentView = new ContentView();
+    public DoubleProperty doubleBinding = contentView.hajt;
     private Group paragraphNodes = new Group();
 
     private Text promptNode;
@@ -436,8 +495,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
                 updateTextNodeCaretPos(textArea.getCaretPosition());
             }
         });
-
-//        setManaged(false);
 
         // Initialize content
         getChildren().add(contentView);

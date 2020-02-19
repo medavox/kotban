@@ -1,7 +1,6 @@
 package com.github.medavox.kotban
 
 import com.github.medavox.kotban.textaria.TextAria
-import com.github.medavox.kotban.textaria.Utils.computeTextHeight
 import com.sun.javafx.tk.FontMetrics
 import com.sun.javafx.tk.Toolkit
 import javafx.application.Application
@@ -15,9 +14,9 @@ import javafx.scene.input.TransferMode
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.scene.text.Text
+import javafx.scene.text.TextAlignment
 import javafx.stage.Stage
 import java.io.File
-import kotlin.math.max
 
 
 //todo:
@@ -58,7 +57,6 @@ class Kotban : Application() {
     override fun start(primaryStage:Stage) {
 
         val root = VBox()
-
         val colScrol = ScrollPane().apply {//horizontal scrollpane for columns
             contentContainer = this
 
@@ -178,7 +176,7 @@ class Kotban : Application() {
     /**Generates the UI component hierarchy for a single Note.*/
     private fun uiOf(note:Note): Node = TitledPane().apply {
         text = note.title
-        content = TextAria(note.contents).also { textArea ->
+        content = (if(note.title == "Design Document.md") TextAria(note.contents, true) else TextAria(note.contents)).also { textArea ->
             textArea.isEditable=false
             textArea.isWrapText = true
             //Utils.computeTextHeight(font = textArea.font, text = textArea.text, wrappingWidth = COLUMN_WIDTH, lineSpacing = ???)
@@ -188,7 +186,6 @@ class Kotban : Application() {
             // the line is wrapped anyway only when the text area's height is larger than one of its containers
             //javafx's word wrap algo tries very hard to start each newly wrapped line on non-space characters
             //(I've only see it do otherwise when there were too many spaces in a row to do otherwise)
-            println("\n\n\nNEW FILE\n\n\n")
             val calcedRows = textArea.paragraphs.fold(0) { acc: Int, line: CharSequence ->
                 //work out how many wrapped lines each non-empty 'paragraph' takes up
 /*                    if(line.isNotEmpty()) {
@@ -198,14 +195,34 @@ class Kotban : Application() {
                 val selfWrappedLines = estimateWordBoundaryAwareWrapping(fontMetrics, line.toString(),
                 //take into account the horizontal space lost to the TextArea's potential scroll bar
                     COLUMN_WIDTH-SCROLLBAR_WIDTH)
-                selfWrappedLines.forEach { println(it) }
+                if(note.title == "Design Document.md") selfWrappedLines.forEach { println(it) }
                 acc + selfWrappedLines.size
             }
-            //textArea.prefHeight = calcedRows.toDouble() * (fontMetrics.lineHeight + 1.25/*Calculated through sheer fucking trial and error.*/)
+            val calcedHeight = calcedRows.toDouble() * fontMetrics.lineHeight
+            val calcedHeightMultiplied = (calcedRows.toDouble() * fontMetrics.lineHeight) * 1.1
+            val calcedHeightWithAddition = calcedRows.toDouble() * (fontMetrics.lineHeight + 1.25/*Calculated through sheer fucking trial and error.*/)
+            val taeFuck = textArea.getTaeFuck(COLUMN_WIDTH)
+            //val cvh = textArea.guess3(COLUMN_WIDTH)
             //textArea.prefRowCount = calcedRows
+            textArea.prefHeightProperty().bind(textArea.doubleBinding)
+            /*val prismTextLayout = PrismTextLayout().apply {
+                setContent(textArea.text, textArea.font.impl_getNativeFont())
+            }*/
 
-            textArea.prefHeight = textArea.getTaeFuck(COLUMN_WIDTH)
-            println("\t\"${note.title}\" calced rows: $calcedRows; calced height: "+textArea.prefHeight)
+            val text = Text()
+            text.font = textArea.font
+            text.wrappingWidth = COLUMN_WIDTH
+            text.textAlignment = TextAlignment.JUSTIFY
+            text.text = textArea.text
+            val emulationByJavaFxText = text.boundsInLocal.height
+
+            //textArea.prefHeight = emulationByJavaFxText
+            /*if(note.title == "Design Document.md") { textArea.prefHeight = 4804.0
+            }else{textArea.prefRowCount = prismTextLayout.lines.size}*/
+            println("\t\"${note.title}\" calced rows: $calcedRows;" +
+                    " calced height: $calcedHeight; taeFukt height: $taeFuck; with addition: $calcedHeightWithAddition;" +
+                    " multiplied: $calcedHeightMultiplied; actual height: ${textArea.prefHeight};"+
+                    " emulationByJavaFxText: $emulationByJavaFxText")
 
             //val length = fontMetrics.computeStringWidth(textArea.text)
             //println("\'${note.title}\' height: ${it.height}; prefHeight:${it.prefHeight}")
