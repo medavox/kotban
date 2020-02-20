@@ -4,25 +4,23 @@ import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
 
-/**From https://stackoverflow.com/a/18004334*/
-public class DesktopApi {
+/**Based on code from https://stackoverflow.com/a/18004334*/
+object DesktopApi {
 
-    public static boolean browse(URI uri) {
+    fun browse(uri:URI) : Boolean {
         if (openSystemSpecific(uri.toString())) return true;
         return browseDESKTOP(uri);
     }
 
 
-    public static boolean open(File file) {
+    fun open(file:File) : Boolean {
         if (openSystemSpecific(file.getPath())) return true;
         return openDESKTOP(file);
     }
 
 
-    public static boolean edit(File file) {
+    fun edit(file:File) : Boolean {
         // you can try something like
         // runCommand("gimp", "%s", file.getPath())
         // based on user preferences.
@@ -31,8 +29,8 @@ public class DesktopApi {
     }
 
 
-    private static boolean openSystemSpecific(String what) {
-        EnumOS os = getOs();
+    private fun openSystemSpecific(what:String) : Boolean {
+        val os:EnumOS = getOs();
         if (os.isLinux()) {
             if (runCommand("kde-open", "%s", what)) return true;
             if (runCommand("gnome-open", "%s", what)) return true;
@@ -50,7 +48,7 @@ public class DesktopApi {
     }
 
 
-    private static boolean browseDESKTOP(URI uri) {
+    private fun browseDESKTOP(uri:URI) : Boolean {
         logOut("Trying to use Desktop.getDesktop().browse() with " + uri.toString());
         try {
             if (!Desktop.isDesktopSupported()) {
@@ -66,14 +64,14 @@ public class DesktopApi {
             Desktop.getDesktop().browse(uri);
 
             return true;
-        } catch (Throwable t) {
+        } catch (t:Throwable) {
             logErr("Error using desktop browse.", t);
             return false;
         }
     }
 
 
-    private static boolean openDESKTOP(File file) {
+    private fun openDESKTOP(file:File) : Boolean {
         logOut("Trying to use Desktop.getDesktop().open() with " + file.toString());
         try {
             if (!Desktop.isDesktopSupported()) {
@@ -89,14 +87,14 @@ public class DesktopApi {
             Desktop.getDesktop().open(file);
 
             return true;
-        } catch (Throwable t) {
+        } catch (t:Throwable) {
             logErr("Error using desktop open.", t);
             return false;
         }
     }
 
 
-    private static boolean editDESKTOP(File file) {
+    private fun editDESKTOP(file:File) : Boolean {
         logOut("Trying to use Desktop.getDesktop().edit() with " + file);
         try {
             if (!Desktop.isDesktopSupported()) {
@@ -111,23 +109,23 @@ public class DesktopApi {
 
             Desktop.getDesktop().edit(file);
             return true;
-        } catch (Throwable t) {
+        } catch (t:Throwable) {
             logErr("Error using desktop edit.", t);
             return false;
         }
     }
 
 
-    private static boolean runCommand(String command, String args, String file) {
+    private fun runCommand(command:String, args:String, file:String) : Boolean {
         logOut("Trying to exec:\n   cmd = " + command + "\n   args = " + args + "\n   %s = " + file);
-        String[] parts = prepareCommand(command, args, file);
+        val parts:Array<String> = prepareCommand(command, args, file)
 
         try {
-            Process p = Runtime.getRuntime().exec(parts);
+            val p:Process? = Runtime.getRuntime().exec(parts)
             if (p == null) return false;
 
             try {
-                int retval = p.exitValue();
+                val retval:Int = p.exitValue();
                 if (retval == 0) {
                     logErr("Process ended immediately.");
                     return false;
@@ -135,66 +133,66 @@ public class DesktopApi {
                     logErr("Process crashed.");
                     return false;
                 }
-            } catch (IllegalThreadStateException itse) {
+            } catch (itse:IllegalThreadStateException) {
                 logErr("Process is running.");
                 return true;
             }
-        } catch (IOException e) {
+        } catch (e:IOException) {
             logErr("Error running command.", e);
             return false;
         }
     }
 
 
-    private static String[] prepareCommand(String command, String args, String file) {
-        List<String> parts = new ArrayList<String>();
+    private fun prepareCommand(command:String, args:String?, file:String):Array<String> {
+        val parts = mutableListOf<String>()
         parts.add(command);
 
         if (args != null) {
-            for (String s : args.split(" ")) {
-                s = String.format(s, file); // put in the filename thing
+            for (s:String in args.split(" ")) {
+                val s2 =  String.format(s, file) // put in the filename thing
 
-                parts.add(s.trim());
+                parts.add(s2.trim());
             }
         }
 
-        return parts.toArray(new String[parts.size()]);
+        return parts.toTypedArray()
     }
 
-    private static void logErr(String msg, Throwable t) {
+    private fun logErr(msg:String, t:Throwable) {
         System.err.println(msg);
         t.printStackTrace();
     }
 
-    private static void logErr(String msg) {
+    private fun logErr(msg:String) {
         System.err.println(msg);
     }
 
-    private static void logOut(String msg) {
+    private fun logOut(msg:String) {
         System.out.println(msg);
     }
 
-    public static enum EnumOS {
+    enum class EnumOS {
         linux, macos, solaris, unknown, windows;
 
-        public boolean isLinux() {
+        fun isLinux():Boolean {
             return this == linux || this == solaris;
         }
 
 
-        public boolean isMac() {
+        fun isMac():Boolean {
             return this == macos;
         }
 
 
-        public boolean isWindows() {
+        fun isWindows():Boolean {
             return this == windows;
         }
     }
 
 
-    public static EnumOS getOs() {
-        String s = System.getProperty("os.name").toLowerCase();
+    fun getOs() : EnumOS {
+        val s:String = System.getProperty("os.name").toLowerCase()
 
         if (s.contains("win")) {
             return EnumOS.windows;
