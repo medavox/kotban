@@ -5,10 +5,10 @@ import javafx.scene.control.Skin
 import javafx.scene.control.TextArea
 
 class TextAria(text:String) : TextArea(text) {
-    private val taSkin:TextAriaSkin = TextAriaSkin(this)
+    internal val ariaSkin:TextAriaSkin = TextAriaSkin(this)
     override fun createDefaultSkin(): Skin<*> {
-        return taSkin
+        return ariaSkin
     }
 
-    val doubleBinding: DoubleProperty = taSkin.doubleBinding
+    val doubleBinding: DoubleProperty = ariaSkin.doubleBinding
 }

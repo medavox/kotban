@@ -406,7 +406,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
 
     public TextAriaSkin(final TextAria textArea) {
         super(textArea, new TextAriaBehavior(textArea));
-        getBehavior().setTextAreaSkin(this);
         this.textArea = textArea;
 
         caretPosition = new IntegerBinding() {

@@ -42,128 +42,122 @@ import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
+import com.sun.javafx.PlatformUtil.isMac
+import com.sun.javafx.PlatformUtil.isWindows
+import javafx.scene.input.KeyCode.*
+import javafx.scene.input.KeyEvent.KEY_PRESSED
 
 
 /**
  * Text area behavior.
  */
-public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
+class TextAriaBehavior(textArea:TextAria) : TextInputControlBehavior<TextAria>(textArea, TEXT_AREA_BINDINGS) {
     /**************************************************************************
      *                          Setup KeyBindings                             *
      *************************************************************************/
-    protected static final List<KeyBinding> TEXT_AREA_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        TEXT_AREA_BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED, "LineStart")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(END, KEY_PRESSED, "LineEnd")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "PreviousLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "PreviousLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "NextLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "NextLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_UP, KEY_PRESSED, "PreviousPage")); // new
-        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage")); // new
-        TEXT_AREA_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraverseOrInsertTab")); // changed
+    private val skin:TextAriaSkin = textArea.ariaSkin
+    companion object {
+        private val TEXT_AREA_BINDINGS = mutableListOf<KeyBinding>().apply {
+            add(KeyBinding(HOME, KEY_PRESSED, "LineStart")) // changed
+            add(KeyBinding(END, KEY_PRESSED, "LineEnd")) // changed
+            add(KeyBinding(UP, KEY_PRESSED, "PreviousLine")) // changed
+            add(KeyBinding(KP_UP, KEY_PRESSED, "PreviousLine")) // changed
+            add(KeyBinding(DOWN, KEY_PRESSED, "NextLine")) // changed
+            add(KeyBinding(KP_DOWN, KEY_PRESSED, "NextLine")) // changed
+            add(KeyBinding(PAGE_UP, KEY_PRESSED, "PreviousPage")) // new
+            add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage")) // new
+            add(KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine")) // changed
+            add(KeyBinding(TAB, KEY_PRESSED, "TraverseOrInsertTab")) // changed
 
-        TEXT_AREA_BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED, "SelectLineStart").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(END, KEY_PRESSED, "SelectLineEnd").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectPreviousLine").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectPreviousLine").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectNextLine").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectNextLine").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_UP, KEY_PRESSED, "SelectPreviousPage").shift()); // new
-        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift()); // new
-        // Platform specific settings
-        if (isMac()) {
-            TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "LineStart").shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "LineStart").shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "LineEnd").shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED, "LineEnd").shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "Home").shortcut());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "Home").shortcut());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "End").shortcut());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "End").shortcut());
+            add(KeyBinding(HOME, KEY_PRESSED, "SelectLineStart").shift()) // changed
+            add(KeyBinding(END, KEY_PRESSED, "SelectLineEnd").shift()) // changed
+            add(KeyBinding(UP, KEY_PRESSED, "SelectPreviousLine").shift()) // changed
+            add(KeyBinding(KP_UP, KEY_PRESSED, "SelectPreviousLine").shift()) // changed
+            add(KeyBinding(DOWN, KEY_PRESSED, "SelectNextLine").shift()) // changed
+            add(KeyBinding(KP_DOWN, KEY_PRESSED, "SelectNextLine").shift()) // changed
+            add(KeyBinding(PAGE_UP, KEY_PRESSED, "SelectPreviousPage").shift()) // new
+            add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift()) // new
+            // Platform specific settings
+            if (isMac()) {
+                add(KeyBinding(LEFT, KEY_PRESSED, "LineStart").shortcut()) // changed
+                add(KeyBinding(KP_LEFT, KEY_PRESSED, "LineStart").shortcut()) // changed
+                add(KeyBinding(RIGHT, KEY_PRESSED, "LineEnd").shortcut()) // changed
+                add(KeyBinding(KP_RIGHT, KEY_PRESSED, "LineEnd").shortcut()) // changed
+                add(KeyBinding(UP, KEY_PRESSED, "Home").shortcut())
+                add(KeyBinding(KP_UP, KEY_PRESSED, "Home").shortcut())
+                add(KeyBinding(DOWN, KEY_PRESSED, "End").shortcut())
+                add(KeyBinding(KP_DOWN, KEY_PRESSED, "End").shortcut())
 
-            TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "SelectLineStartExtend").shift().shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "SelectLineStartExtend").shift().shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "SelectLineEndExtend").shift().shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED, "SelectLineEndExtend").shift().shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectHomeExtend").shortcut().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectHomeExtend").shortcut().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectEndExtend").shortcut().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectEndExtend").shortcut().shift());
+                add(KeyBinding(LEFT, KEY_PRESSED, "SelectLineStartExtend").shift().shortcut()) // changed
+                add(KeyBinding(KP_LEFT, KEY_PRESSED, "SelectLineStartExtend").shift().shortcut()) // changed
+                add(KeyBinding(RIGHT, KEY_PRESSED, "SelectLineEndExtend").shift().shortcut()) // changed
+                add(KeyBinding(KP_RIGHT, KEY_PRESSED, "SelectLineEndExtend").shift().shortcut()) // changed
+                add(KeyBinding(UP, KEY_PRESSED, "SelectHomeExtend").shortcut().shift());
+                add(KeyBinding(KP_UP, KEY_PRESSED, "SelectHomeExtend").shortcut().shift());
+                add(KeyBinding(DOWN, KEY_PRESSED, "SelectEndExtend").shortcut().shift());
+                add(KeyBinding(KP_DOWN, KEY_PRESSED, "SelectEndExtend").shortcut().shift());
 
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").alt());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").alt());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").alt());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").alt());
+                add(KeyBinding(UP, KEY_PRESSED, "ParagraphStart").alt());
+                add(KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").alt());
+                add(KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").alt());
+                add(KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").alt());
 
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").alt().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").alt().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
-        } else {
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").ctrl());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").ctrl());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").ctrl().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").ctrl().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
+                add(KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").alt().shift());
+                add(KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").alt().shift());
+                add(KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
+                add(KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
+            } else {
+                add(KeyBinding(UP, KEY_PRESSED, "ParagraphStart").ctrl());
+                add(KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").ctrl());
+                add(KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
+                add(KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
+                add(KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").ctrl().shift());
+                add(KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").ctrl().shift());
+                add(KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
+                add(KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
+            }
+            // Add the other standard key bindings in
+            addAll(Utils.KEY_BINDINGS);
+            // However, we want to consume other key press / release events too, for
+            // things that would have been handled by the InputCharacter normally
+            add(KeyBinding(null, KEY_PRESSED, "Consume"));
         }
-        // Add the other standard key bindings in
-        TEXT_AREA_BINDINGS.addAll(Utils.KEY_BINDINGS);
-        // However, we want to consume other key press / release events too, for
-        // things that would have been handled by the InputCharacter normally
-        TEXT_AREA_BINDINGS.add(new KeyBinding(null, KEY_PRESSED, "Consume"));
     }
 
-    private TextAriaSkin skin;
-    private ContextMenu contextMenu;
-    private TwoLevelFocusBehavior tlFocus;
+
+    private val contextMenu:ContextMenu = ContextMenu()
+    private var tlFocus:TwoLevelFocusBehavior? = null
 
     /**************************************************************************
      * Constructors                                                           *
      *************************************************************************/
 
-    public TextAriaBehavior(final TextAria textArea) {
-        super(textArea, TEXT_AREA_BINDINGS);
-
-        contextMenu = new ContextMenu();
+    init {
         if (IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
 
         // Register for change events
-        textArea.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+        textArea.focusedProperty().addListener { observable, oldValue, newValue ->
                 // NOTE: The code in this method is *almost* and exact copy of what is in TextFieldBehavior.
                 // The only real difference is that TextFieldBehavior selects all the text when the control
                 // receives focus (when not gained by mouse click), whereas TextArea doesn't, and also the
                 // TextArea doesn't lose selection on focus lost, whereas the TextField does.
-                final TextAria textArea = getControl();
+                val textArea:TextAria = getControl()
                 if (textArea.isFocused()) {
                     if (PlatformUtil.isIOS()) {
                         // Special handling of focus on iOS is required to allow to
                         // control native keyboard, because native keyboard is popped-up only when native
                         // text component gets focus. When we have JFX keyboard we can remove this code
-                        final Bounds bounds = textArea.getBoundsInParent();
-                        double w = bounds.getWidth();
-                        double h = bounds.getHeight();
-                        Affine3D trans = Utils.calculateNodeToSceneTransform(textArea);
-                        String text = textArea.textProperty().getValueSafe();
+                        val bounds = textArea.boundsInParent
+                        val w = bounds.width
+                        val h = bounds.height
+                        val trans:Affine3D = Utils.calculateNodeToSceneTransform(textArea)
+                        val text = textArea.textProperty().valueSafe
 
                         // we need to display native text input component on the place where JFX component is drawn
                         // all parameters needed to do that are passed to native impl. here
-                        textArea.getScene().getWindow().impl_getPeer().requestInput(text, Utils.TextInputTypes.TEXT_AREA.ordinal(), w, h,
+                        textArea.getScene().getWindow().impl_getPeer().requestInput(text, Utils.TextInputTypes.TEXT_AREA.ordinal/*FIXME: this value might have changed*/, w, h,
                                 trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
                                 trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
                                 trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
@@ -181,32 +175,26 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
                     setCaretAnimating(false);
                 }
             }
-        });
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
-            tlFocus = new TwoLevelFocusBehavior(textArea); // needs to be last.
+            tlFocus = TwoLevelFocusBehavior(textArea); // needs to be last.
         }
     }
 
-    @Override public void dispose() {
-        if (tlFocus != null) tlFocus.dispose();
+    override fun dispose() {
+        tlFocus?.dispose();
         super.dispose();
-    }
-
-    // An unholy back-reference!
-    public void setTextAreaSkin(TextAriaSkin skin) {
-        this.skin = skin;
     }
 
     /**************************************************************************
      * Key handling implementation                                            *
      *************************************************************************/
 
-    @Override public void callAction(String name) {
-        final TextAria textInputControl = getControl();
-
-        boolean done = false;
+    override fun callAction(name:String) {
+        val textInputControl = control
+        var ret = name
+        var done = false;
 
         if (textInputControl.isEditable()) {
 //            fnCaretAnim(false);
@@ -241,7 +229,7 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
 
             else if ("TraverseOrInsertTab".equals(name)) {
                 // RT-40312: Non-editabe mode means traverse instead of insert.
-                name = "TraverseNext";
+                ret = "TraverseNext";
                 done = false;
             } else {
                 done = false;
@@ -250,52 +238,51 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
 //            fnCaretAnim(true);
 
         if (!done) {
-            super.callAction(name);
+            super.callAction(ret);
         }
     }
 
-    private void insertNewLine() {
-        TextAria textArea = getControl();
+    private fun insertNewLine() {
+        val textArea = getControl()
         textArea.replaceSelection("\n");
     }
 
-    private void insertTab() {
-        TextAria textArea = getControl();
+    private fun insertTab() {
+        val textArea = getControl()
         textArea.replaceSelection("\t");
     }
 
-    @Override protected void deleteChar(boolean previous) {
+    override fun deleteChar(previous:Boolean) {
         skin.deleteChar(previous);
     }
 
-    @Override protected void deleteFromLineStart() {
-        TextAria textArea = getControl();
-        int end = textArea.getCaretPosition();
+    override fun deleteFromLineStart() {
+        val textArea = getControl()
+        val end:Int = textArea.getCaretPosition();
 
         if (end > 0) {
             lineStart(false, false);
-            int start = textArea.getCaretPosition();
+            val start:Int = textArea.getCaretPosition();
             if (end > start) {
                 replaceText(start, end, "");
             }
         }
     }
 
-    private void lineStart(boolean select, boolean extendSelection) {
+    private fun lineStart(select:Boolean, extendSelection:Boolean) {
         skin.lineStart(select, extendSelection);
     }
 
-    private void lineEnd(boolean select, boolean extendSelection) {
+    private fun lineEnd(select:Boolean, extendSelection:Boolean) {
         skin.lineEnd(select, extendSelection);
     }
 
-    protected void scrollCharacterToVisible(int index) {
-        // TODO this method should be removed when TextAriaSkin
-        // TODO is refactored to no longer need it.
+    override fun scrollCharacterToVisible(index:Int) {
+        //TODO this method should be removed when TextAriaSkin is refactored to no longer need it.
         skin.scrollCharacterToVisible(index);
     }
 
-    @Override protected void replaceText(int start, int end, String txt) {
+    override fun replaceText(start:Int, end:Int, txt:String) {
         getControl().replaceText(start, end, txt);
     }
 
@@ -303,12 +290,12 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
      * If the focus is gained via response to a mouse click, then we don't
      * want to select all the text even if selectOnFocus is true.
      */
-    private boolean focusGainedByMouseClick = false; // TODO!!
-    private boolean shiftDown = false;
-    private boolean deferClick = false;
+    private var focusGainedByMouseClick:Boolean = false; // TODO!!
+    private var shiftDown:Boolean = false;
+    private var deferClick:Boolean = false;
 
-    @Override public void mousePressed(MouseEvent e) {
-        TextAria textArea = getControl();
+    override fun mousePressed(e:MouseEvent) {
+        val textArea:TextAria = getControl()
         super.mousePressed(e);
         // We never respond to events if disabled
         if (!textArea.isDisabled()) {
@@ -328,11 +315,11 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
 
             // if the primary button was pressed
             if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                HitInfo hit = skin.getIndex(e.getX(), e.getY());
-                int i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, textArea.textProperty().getValueSafe());
+                val hit:HitInfo = skin.getIndex(e.getX(), e.getY())
+                val i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, textArea.textProperty().getValueSafe())
 //                 int i = skin.getInsertionPoint(e.getX(), e.getY());
-                final int anchor = textArea.getAnchor();
-                final int caretPosition = textArea.getCaretPosition();
+                val anchor:Int = textArea.getAnchor()
+                val caretPosition:Int = textArea.getCaretPosition()
                 if (e.getClickCount() < 2 &&
                         (e.isSynthesized() ||
                                 (anchor != caretPosition &&
@@ -348,11 +335,10 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
                     // switch into text dragging mode, change the cursor
                     // to indicate the text can be dragged, etc.
                 } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown() || e.isShortcutDown())) {
-                    switch (e.getClickCount()) {
-                        case 1: skin.positionCaret(hit, false, false); break;
-                        case 2: mouseDoubleClick(hit); break;
-                        case 3: mouseTripleClick(hit); break;
-                        default: // no-op
+                    when (e.clickCount) {
+                        1 -> skin.positionCaret(hit, false, false)
+                        2 -> mouseDoubleClick(hit)
+                        3 -> mouseTripleClick(hit)
                     }
                 } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown() || e.isShortcutDown()) && e.getClickCount() == 1) {
                     // didn't click inside the selection, so select
@@ -379,8 +365,8 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
         }
     }
 
-    @Override public void mouseDragged(MouseEvent e) {
-        final TextAria textArea = getControl();
+    override fun mouseDragged(e:MouseEvent) {
+        val textArea = getControl()
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
         if (!textArea.isDisabled() && !e.isSynthesized()) {
@@ -393,8 +379,8 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
         deferClick = false;
     }
 
-    @Override public void mouseReleased(final MouseEvent e) {
-        final TextAria textArea = getControl();
+    override fun mouseReleased(e:MouseEvent) {
+        val textArea = getControl()
         super.mouseReleased(e);
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
@@ -409,34 +395,34 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
         }
     }
 
-    @Override public void contextMenuRequested(ContextMenuEvent e) {
-        final TextAria textArea = getControl();
+    override fun contextMenuRequested(e:ContextMenuEvent) {
+        val textArea = getControl();
 
         if (contextMenu.isShowing()) {
             contextMenu.hide();
         } else if (textArea.getContextMenu() == null) {
-            double screenX = e.getScreenX();
-            double screenY = e.getScreenY();
-            double sceneX = e.getSceneX();
+            var screenX = e.getScreenX();
+            var screenY = e.getScreenY();
+            var sceneX = e.getSceneX();
 
             if (IS_TOUCH_SUPPORTED) {
-                Point2D menuPos;
+                val menuPos:Point2D? =
                 if (textArea.getSelection().getLength() == 0) {
                     skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false, false);
-                    menuPos = skin.getMenuPosition();
+                    skin.getMenuPosition()
                 } else {
-                    menuPos = skin.getMenuPosition();
+                    val menuPos = skin.getMenuPosition();
                     if (menuPos != null && (menuPos.getX() <= 0 || menuPos.getY() <= 0)) {
                         skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false, false);
-                        menuPos = skin.getMenuPosition();
-                    }
+                        skin.getMenuPosition()
+                    } else menuPos
                 }
 
                 if (menuPos != null) {
-                    Point2D p = getControl().localToScene(menuPos);
-                    Scene scene = getControl().getScene();
-                    Window window = scene.getWindow();
-                    Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
+                    val p:Point2D = getControl().localToScene(menuPos);
+                    val scene = getControl().getScene();
+                    val window = scene.getWindow();
+                    val location = Point2D(window.getX() + scene.getX() + p.getX(),
                             window.getY() + scene.getY() + p.getY());
                     screenX = location.getX();
                     sceneX = p.getX();
@@ -445,17 +431,17 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
             }
 
             skin.populateContextMenu(contextMenu);
-            double menuWidth = contextMenu.prefWidth(-1);
-            double menuX = screenX - (IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
-            Screen currentScreen = com.sun.javafx.util.Utils.getScreenForPoint(screenX, 0);
-            Rectangle2D bounds = currentScreen.getBounds();
+            val menuWidth = contextMenu.prefWidth(-1.0);
+            val menuX = screenX - if(IS_TOUCH_SUPPORTED) menuWidth / 2 else 0.0
+            val currentScreen:Screen = com.sun.javafx.util.Utils.getScreenForPoint(screenX, 0.0);
+            val bounds:Rectangle2D = currentScreen.getBounds();
 
             if (menuX < bounds.getMinX()) {
                 getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
                 getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
                 contextMenu.show(getControl(), bounds.getMinX(), screenY);
             } else if (screenX + menuWidth > bounds.getMaxX()) {
-                double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
+                val leftOver = menuWidth - ( bounds.getMaxX() - screenX);
                 getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
                 getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
                 contextMenu.show(getControl(), screenX - leftOver, screenY);
@@ -469,12 +455,12 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
         e.consume();
     }
 
-    @Override protected void setCaretAnimating(boolean play) {
+    override fun setCaretAnimating(play:Boolean) {
         skin.setCaretAnimating(play);
     }
 
-    protected void mouseDoubleClick(HitInfo hit) {
-        final TextAria textArea = getControl();
+    protected fun mouseDoubleClick(hit:HitInfo) {
+        val textArea = getControl()
         textArea.previousWord();
         if (isWindows()) {
             textArea.selectNextWord();
@@ -483,7 +469,7 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
         }
     }
 
-    protected void mouseTripleClick(HitInfo hit) {
+    protected fun mouseTripleClick(hit:HitInfo) {
         // select the line
         skin.paragraphStart(false, false);
         skin.paragraphEnd(false, isWindows(), true);
