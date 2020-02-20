@@ -37,6 +37,8 @@ import java.io.File
 // (fix) prevent a drag-move from overwriting an existing file with the same name
 // (fix) very long notes still have scrollbars,
 //   cause scrollbars to appear on other notes in the same column
+// button: Expand/collapse all notes
+// a way to minimise a column (hide it like notes can be hidden)
 /**terminology:
  * board: the whole thing. A folder with subfolders that each contain 0 or more text files
  * column: contains notes/tasks. represented on-disk by a subfolder of the board
