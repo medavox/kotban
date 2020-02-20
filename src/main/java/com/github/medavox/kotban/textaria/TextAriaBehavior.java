@@ -119,7 +119,7 @@ public class TextAriaBehavior extends TextInputControlBehavior<TextAria> {
             TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
         }
         // Add the other standard key bindings in
-        TEXT_AREA_BINDINGS.addAll(TextInputControlBindings.BINDINGS);
+        TEXT_AREA_BINDINGS.addAll(Utils.KEY_BINDINGS);
         // However, we want to consume other key press / release events too, for
         // things that would have been handled by the InputCharacter normally
         TEXT_AREA_BINDINGS.add(new KeyBinding(null, KEY_PRESSED, "Consume"));

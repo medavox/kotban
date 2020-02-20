@@ -84,29 +84,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
         computedPrefHeight = Double.NEGATIVE_INFINITY;
     }
 
-    public double getTaeFuck(double width) {
-        double wrappingWidth;
-        if (width == -1) {
-            wrappingWidth = 0;
-        } else {
-            wrappingWidth = Math.max(width - (snappedLeftInset() + snappedRightInset()), 0);
-        }
-
-        double prefHeight = 0;
-
-        for (Node node : paragraphNodes.getChildren()) {
-            Text paragraphNode = (Text)node;
-            prefHeight += Utils.computeTextHeight(
-                    paragraphNode.getFont(),
-                    paragraphNode.getText(),
-                    wrappingWidth,
-                    paragraphNode.getBoundsType());
-        }
-
-        prefHeight += snappedTopInset() + snappedBottomInset();
-        return prefHeight;
-    }
-
     private class ContentView extends Region {
         {
             getStyleClass().add("content");
@@ -387,51 +364,6 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
             @Override
             public String getName() {
                 return "my fucking height";
-            }
-        };
-
-        public DoubleBinding heightAttempt1 = new DoubleBinding() {
-            @Override
-            protected double computeValue() {
-                super.bind(prefWidthProperty());
-                //this is EXACTLY the same code as the section in contentView.layoutChildren() which produces correct results.
-                //this copy does not produce correct results: the snappedTopInset here is 0.0, and is 4.0 in contentView.
-                //the paragraph height is also significantly reduced, by an unpredictable factor, usually between 0.6 - 0.7,
-                //but also seen to be 0.3
-
-                //so the execution contexts must be different. The values from the called methods must different.
-                //how to get the result from layoutChildren() earlier?
-                //or at least re-layout the textArea when the correct values are available
-                double width = getWidth();
-                TextAria textArea = getSkinnable();
-                System.out.println("THERE width: "+width);
-
-                // Lay out paragraphs
-                final double topPadding = snappedTopInset();
-                final double leftPadding = snappedLeftInset();
-
-                double wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0);
-
-                double y = topPadding;
-                System.out.println("THERE snappedTopInset: "+y);
-
-                final List<Node> paragraphNodesChildren = paragraphNodes.getChildren();
-
-                for (int i = 0; i < paragraphNodesChildren.size(); i++) {
-                    Node node = paragraphNodesChildren.get(i);
-                    Text paragraphNode = (Text)node;
-                    paragraphNode.setWrappingWidth(wrappingWidth);
-
-                    Bounds bounds = paragraphNode.getBoundsInLocal();
-                    //System.out.println("THERE paragraph height: "+bounds.getHeight());
-                    //System.out.println("THERE chars in paragraph: "+paragraphNode.getText().length());
-                    y += bounds.getHeight();
-                }
-                //System.out.println("THERE contentView 'y': "+y);
-                //textArea.prefHeightProperty().bind(new SimpleDoubleProperty(y));
-                System.out.println("calculated binding value: "+y);
-                return y;
-                //return textArea.widthProperty();
             }
         };
     }

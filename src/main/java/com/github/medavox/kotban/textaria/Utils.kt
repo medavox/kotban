@@ -1,17 +1,21 @@
 package com.github.medavox.kotban.textaria
 
+import com.sun.javafx.PlatformUtil
 import com.sun.javafx.geom.transform.Affine3D
+import com.sun.javafx.scene.control.behavior.KeyBinding
+import com.sun.javafx.scene.control.behavior.OptionalBoolean
 import com.sun.javafx.scene.text.HitInfo
 import com.sun.javafx.scene.text.TextLayout
 import com.sun.javafx.tk.Toolkit
 import javafx.scene.Node
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyEvent
 import javafx.scene.text.Font
 import javafx.scene.text.TextBoundsType
 import java.text.BreakIterator
 
-/**copied portions of package com.sun.javafx.scene.control.skin.Utils,
+/**Various private static methods copied from package com.sun.javafx.scene.control.skin,
  * to support the import of TextAreaSkin */
-
 @Suppress("DEPRECATION")
 object Utils {
     /* Using TextLayout directly for simple text measurement.
@@ -133,5 +137,130 @@ object Utils {
      */
     internal enum class TextInputTypes {
         TEXT_FIELD, PASSWORD_FIELD, EDITABLE_COMBO, TEXT_AREA
+    }
+
+    @JvmField
+    val KEY_BINDINGS: List<KeyBinding> = listOf(
+        // caret movement
+        KeyBinding(KeyCode.RIGHT, KeyEvent.KEY_PRESSED, "Right"),
+        KeyBinding(KeyCode.KP_RIGHT, KeyEvent.KEY_PRESSED, "Right"),
+        KeyBinding(KeyCode.LEFT, KeyEvent.KEY_PRESSED, "Left"),
+        KeyBinding(KeyCode.KP_LEFT, KeyEvent.KEY_PRESSED, "Left"),
+        KeyBinding(KeyCode.UP, KeyEvent.KEY_PRESSED, "Home"),
+        KeyBinding(KeyCode.KP_UP, KeyEvent.KEY_PRESSED, "Home"),
+        KeyBinding(KeyCode.HOME, KeyEvent.KEY_PRESSED, "Home"),
+        KeyBinding(KeyCode.DOWN, KeyEvent.KEY_PRESSED, "End"),
+        KeyBinding(KeyCode.KP_DOWN, KeyEvent.KEY_PRESSED, "End"),
+        KeyBinding(KeyCode.END, KeyEvent.KEY_PRESSED, "End"),
+        KeyBinding(KeyCode.ENTER, KeyEvent.KEY_PRESSED, "Fire"),
+        // deletion
+        KeyBinding(KeyCode.BACK_SPACE, KeyEvent.KEY_PRESSED, "DeletePreviousChar"),
+        KeyBinding(KeyCode.DELETE, KeyEvent.KEY_PRESSED, "DeleteNextChar"),
+        // cut/copy/paste
+        KeyBinding(KeyCode.CUT, KeyEvent.KEY_PRESSED, "Cut"),
+        KeyBinding(KeyCode.DELETE, KeyEvent.KEY_PRESSED, "Cut").shift(),
+        KeyBinding(KeyCode.COPY, KeyEvent.KEY_PRESSED, "Copy"),
+        KeyBinding(KeyCode.PASTE, KeyEvent.KEY_PRESSED, "Paste"),
+        KeyBinding(KeyCode.INSERT, KeyEvent.KEY_PRESSED, "Paste").shift(),// does this belong on mac?
+        // selection
+        KeyBinding(KeyCode.RIGHT, KeyEvent.KEY_PRESSED, "SelectRight").shift(),
+        KeyBinding(KeyCode.KP_RIGHT, KeyEvent.KEY_PRESSED, "SelectRight").shift(),
+        KeyBinding(KeyCode.LEFT, KeyEvent.KEY_PRESSED, "SelectLeft").shift(),
+        KeyBinding(KeyCode.KP_LEFT, KeyEvent.KEY_PRESSED, "SelectLeft").shift(),
+        KeyBinding(KeyCode.UP, KeyEvent.KEY_PRESSED, "SelectHome").shift(),
+        KeyBinding(KeyCode.KP_UP, KeyEvent.KEY_PRESSED, "SelectHome").shift(),
+        KeyBinding(KeyCode.DOWN, KeyEvent.KEY_PRESSED, "SelectEnd").shift(),
+        KeyBinding(KeyCode.KP_DOWN, KeyEvent.KEY_PRESSED, "SelectEnd").shift(),
+
+        KeyBinding(KeyCode.BACK_SPACE, KeyEvent.KEY_PRESSED, "DeletePreviousChar").shift(),
+        KeyBinding(KeyCode.DELETE, KeyEvent.KEY_PRESSED, "DeleteNextChar").shift(),
+
+        // Any other key press first goes to normal text input
+        // Note this is KEY_TYPED because otherwise the character is not available in the event.
+        KeyBinding(null, KeyEvent.KEY_TYPED, "InputCharacter")
+            .alt(OptionalBoolean.ANY)
+            .shift(OptionalBoolean.ANY)
+            .ctrl(OptionalBoolean.ANY)
+            .meta(OptionalBoolean.ANY),
+
+        // Traversal Bindings
+        KeyBinding(KeyCode.TAB, "TraverseNext"),
+        KeyBinding(KeyCode.TAB, "TraversePrevious").shift(),
+        KeyBinding(KeyCode.TAB, "TraverseNext").ctrl(),
+        KeyBinding(KeyCode.TAB, "TraversePrevious").shift().ctrl(),
+
+        // The following keys are forwarded to the parent container
+        KeyBinding(KeyCode.ESCAPE, "Cancel"),
+        KeyBinding(KeyCode.F10, "ToParent")
+    )+
+    // platform specific settings
+    if (PlatformUtil.isMac()) listOf<KeyBinding>(
+        KeyBinding(KeyCode.HOME, KeyEvent.KEY_PRESSED, "SelectHomeExtend").shift(),
+        KeyBinding(KeyCode.END, KeyEvent.KEY_PRESSED, "SelectEndExtend").shift(),
+
+        KeyBinding(KeyCode.HOME, KeyEvent.KEY_PRESSED, "Home").shortcut(),
+        KeyBinding(KeyCode.END, KeyEvent.KEY_PRESSED, "End").shortcut(),
+        KeyBinding(KeyCode.LEFT, KeyEvent.KEY_PRESSED, "Home").shortcut(),
+        KeyBinding(KeyCode.KP_LEFT, KeyEvent.KEY_PRESSED, "Home").shortcut(),
+        KeyBinding(KeyCode.RIGHT, KeyEvent.KEY_PRESSED, "End").shortcut(),
+        KeyBinding(KeyCode.KP_RIGHT, KeyEvent.KEY_PRESSED, "End").shortcut(),
+        KeyBinding(KeyCode.LEFT, KeyEvent.KEY_PRESSED, "LeftWord").alt(),
+        KeyBinding(KeyCode.KP_LEFT, KeyEvent.KEY_PRESSED, "LeftWord").alt(),
+        KeyBinding(KeyCode.RIGHT, KeyEvent.KEY_PRESSED, "RightWord").alt(),
+        KeyBinding(KeyCode.KP_RIGHT, KeyEvent.KEY_PRESSED, "RightWord").alt(),
+        KeyBinding(KeyCode.DELETE, KeyEvent.KEY_PRESSED, "DeleteNextWord").alt(),
+        KeyBinding(KeyCode.BACK_SPACE, KeyEvent.KEY_PRESSED, "DeletePreviousWord").alt(),
+        KeyBinding(KeyCode.BACK_SPACE, KeyEvent.KEY_PRESSED, "DeleteFromLineStart").shortcut(),
+        KeyBinding(KeyCode.X, KeyEvent.KEY_PRESSED, "Cut").shortcut(),
+        KeyBinding(KeyCode.C, KeyEvent.KEY_PRESSED, "Copy").shortcut(),
+        KeyBinding(KeyCode.INSERT, KeyEvent.KEY_PRESSED, "Copy").shortcut(),
+        KeyBinding(KeyCode.V, KeyEvent.KEY_PRESSED, "Paste").shortcut(),
+        KeyBinding(KeyCode.HOME, KeyEvent.KEY_PRESSED, "SelectHome").shift().shortcut(),
+        KeyBinding(KeyCode.END, KeyEvent.KEY_PRESSED, "SelectEnd").shift().shortcut(),
+        KeyBinding(KeyCode.LEFT, KeyEvent.KEY_PRESSED, "SelectHomeExtend").shift().shortcut(),
+        KeyBinding(KeyCode.KP_LEFT, KeyEvent.KEY_PRESSED, "SelectHomeExtend").shift().shortcut(),
+        KeyBinding(KeyCode.RIGHT, KeyEvent.KEY_PRESSED, "SelectEndExtend").shift().shortcut(),
+        KeyBinding(KeyCode.KP_RIGHT, KeyEvent.KEY_PRESSED, "SelectEndExtend").shift().shortcut(),
+        KeyBinding(KeyCode.A, KeyEvent.KEY_PRESSED, "SelectAll").shortcut(),
+        KeyBinding(KeyCode.LEFT, KeyEvent.KEY_PRESSED, "SelectLeftWord").shift().alt(),
+        KeyBinding(KeyCode.KP_LEFT, KeyEvent.KEY_PRESSED, "SelectLeftWord").shift().alt(),
+        KeyBinding(KeyCode.RIGHT, KeyEvent.KEY_PRESSED, "SelectRightWord").shift().alt(),
+        KeyBinding(KeyCode.KP_RIGHT, KeyEvent.KEY_PRESSED, "SelectRightWord").shift().alt(),
+        KeyBinding(KeyCode.Z, KeyEvent.KEY_PRESSED, "Undo").shortcut(),
+        KeyBinding(KeyCode.Z, KeyEvent.KEY_PRESSED, "Redo").shift().shortcut()
+    )
+    else {
+        listOf<KeyBinding>(
+            KeyBinding(KeyCode.HOME, KeyEvent.KEY_PRESSED, "SelectHome").shift(),
+            KeyBinding(KeyCode.END, KeyEvent.KEY_PRESSED, "SelectEnd").shift(),
+
+            KeyBinding(KeyCode.HOME, KeyEvent.KEY_PRESSED, "Home").ctrl(),
+            KeyBinding(KeyCode.END, KeyEvent.KEY_PRESSED, "End").ctrl(),
+            KeyBinding(KeyCode.LEFT, KeyEvent.KEY_PRESSED, "LeftWord").ctrl(),
+            KeyBinding(KeyCode.KP_LEFT, KeyEvent.KEY_PRESSED, "LeftWord").ctrl(),
+            KeyBinding(KeyCode.RIGHT, KeyEvent.KEY_PRESSED, "RightWord").ctrl(),
+            KeyBinding(KeyCode.KP_RIGHT, KeyEvent.KEY_PRESSED, "RightWord").ctrl(),
+            KeyBinding(KeyCode.H, KeyEvent.KEY_PRESSED, "DeletePreviousChar").ctrl(),
+            KeyBinding(KeyCode.DELETE, KeyEvent.KEY_PRESSED, "DeleteNextWord").ctrl(),
+            KeyBinding(KeyCode.BACK_SPACE, KeyEvent.KEY_PRESSED, "DeletePreviousWord").ctrl(),
+            KeyBinding(KeyCode.X, KeyEvent.KEY_PRESSED, "Cut").ctrl(),
+            KeyBinding(KeyCode.C, KeyEvent.KEY_PRESSED, "Copy").ctrl(),
+            KeyBinding(KeyCode.INSERT, KeyEvent.KEY_PRESSED, "Copy").ctrl(),
+            KeyBinding(KeyCode.V, KeyEvent.KEY_PRESSED, "Paste").ctrl(),
+            KeyBinding(KeyCode.HOME, KeyEvent.KEY_PRESSED, "SelectHome").ctrl().shift(),
+            KeyBinding(KeyCode.END, KeyEvent.KEY_PRESSED, "SelectEnd").ctrl().shift(),
+            KeyBinding(KeyCode.LEFT, KeyEvent.KEY_PRESSED, "SelectLeftWord").ctrl().shift(),
+            KeyBinding(KeyCode.KP_LEFT, KeyEvent.KEY_PRESSED, "SelectLeftWord").ctrl().shift(),
+            KeyBinding(KeyCode.RIGHT, KeyEvent.KEY_PRESSED, "SelectRightWord").ctrl().shift(),
+            KeyBinding(KeyCode.KP_RIGHT, KeyEvent.KEY_PRESSED, "SelectRightWord").ctrl().shift(),
+            KeyBinding(KeyCode.A, KeyEvent.KEY_PRESSED, "SelectAll").ctrl(),
+            KeyBinding(KeyCode.BACK_SLASH, KeyEvent.KEY_PRESSED, "Unselect").ctrl()
+        )+ if (PlatformUtil.isLinux()) listOf<KeyBinding>(
+            KeyBinding(KeyCode.Z, KeyEvent.KEY_PRESSED, "Undo").ctrl(),
+            KeyBinding(KeyCode.Z, KeyEvent.KEY_PRESSED, "Redo").ctrl().shift()
+        ) else listOf<KeyBinding>(  // Windows
+            KeyBinding(KeyCode.Z, KeyEvent.KEY_PRESSED, "Undo").ctrl(),
+            KeyBinding(KeyCode.Y, KeyEvent.KEY_PRESSED, "Redo").ctrl()
+        )
     }
 }

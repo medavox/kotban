@@ -97,79 +97,6 @@ class Kotban : Application() {
         colScrol.content = layoutColumnContents(board.columns)
     }
 
-    private fun estimateWordBoundaryIgnorantWrapping(fontMetrics: FontMetrics, line:String, maxWidthPx:Double):List<String> {
-        if(fontMetrics.computeStringWidth(line) <= maxWidthPx) return listOf(line)
-        val output = mutableListOf<String>()
-        var wraptLineStart = 0
-        var wraptLineEnd = line.length
-        while(wraptLineStart != line.length) {
-            while (fontMetrics.computeStringWidth(line.substring(wraptLineStart, wraptLineEnd)) > maxWidthPx) {
-                wraptLineEnd--
-            }
-            output.add(line.substring(wraptLineStart, wraptLineEnd))
-            wraptLineStart = wraptLineEnd
-            wraptLineEnd = line.length
-        }
-        return output
-    }
-
-    private fun estimateWordBoundaryAwareWrapping(fontMetrics: FontMetrics, line:String, maxWidthPx:Double):List<String> {
-        if(fontMetrics.computeStringWidth(line) <= maxWidthPx) return listOf(line)
-        val output = mutableListOf<String>()
-        var wraptLineStart = 0
-        var wraptLineEnd = line.length
-        fun printIndices() {
-            println(line)
-            if(wraptLineStart < wraptLineEnd) {
-                print(" ".repeat(wraptLineStart)+"^")
-                println(" ".repeat(wraptLineEnd-(wraptLineStart+1) )+"^")
-                print(" ".repeat(wraptLineStart)+"s")
-                println(" ".repeat(wraptLineEnd-(wraptLineStart+1) )+"e")
-            }else if(wraptLineStart > wraptLineEnd) {
-                print(" ".repeat(wraptLineEnd)+"^")
-                println(" ".repeat(wraptLineStart-(wraptLineEnd+1) )+"^")
-                print(" ".repeat(wraptLineEnd)+"e")
-                println(" ".repeat(wraptLineStart-(wraptLineEnd+1) )+"s")
-            }else {
-                println(" ".repeat(wraptLineEnd)+"^")
-                println(" ".repeat(wraptLineEnd-1)+"s&e")
-            }
-        }
-        //val spacesInARow = 500
-        //println("$spacesInARow spaces in a row take up ${fontMetrics.computeStringWidth(" ".repeat(spacesInARow))}px")
-        while(wraptLineStart != line.length) {
-            while (fontMetrics.computeStringWidth(line.substring(wraptLineStart, wraptLineEnd)) > maxWidthPx) {
-
-                val matchiz = Regex("\\s").findAll(line.substring(wraptLineStart, wraptLineEnd)).toList()
-                val backTrackToWordBoundary = matchiz.lastOrNull()?.range?.endInclusive
-                if(line.startsWith("Name")) {
-                    println("squelch: $matchiz")
-                }
-                /*val backTrackToWordBoundary = Regex("\\s").
-                    findAll(line.substring(wraptLineStart, wraptLineEnd)).lastOrNull()?.range?.endInclusive//?.plus(1)//after the last space*/
-                /*backTrackToWordBoundary?.run {
-                    println("RANGE first: $first; last: $last; start: $start; endInclusive: $endInclusive")
-                }*/
-                //the index numbers are relative to the string passed to findAll (which is a substring),
-                //which means that after the first moving of the start index, they're all out of sync with the original line
-                //solution: append the startPoint to ofsets received from findAll
-
-                //printIndices()
-                wraptLineEnd = backTrackToWordBoundary?.plus(wraptLineStart) ?: wraptLineEnd -1
-                if(wraptLineEnd <= wraptLineStart) {
-                    println("ABOUT TO FUCK UP! wraptStart: $wraptLineStart; wraptLineEnd: $wraptLineEnd; whole line:")
-                    printIndices()
-                }
-            }
-            //printIndices()
-            output.add(line.substring(wraptLineStart, wraptLineEnd))
-            wraptLineStart = wraptLineEnd
-            wraptLineEnd = line.length
-            //println("new endpoint: $wraptLineEnd")
-        }
-        return output
-    }
-
     //IMPORTANT: the scrollbar for TextAreas is defined as a scrollpane inside TextAreaSkin.
     //this is also my best lead on word wrapping: it's done by this scrollpane, and is called fitToWidth
 
@@ -179,35 +106,7 @@ class Kotban : Application() {
         content = (if(note.title == "Design Document.md") TextAria(note.contents, true) else TextAria(note.contents)).also { textArea ->
             textArea.isEditable=false
             textArea.isWrapText = true
-            //Utils.computeTextHeight(font = textArea.font, text = textArea.text, wrappingWidth = COLUMN_WIDTH, lineSpacing = ???)
-
-            val fontMetrics: FontMetrics = Toolkit.getToolkit().fontLoader.getFontMetrics(textArea.font)
-            //manually work out how many rows our text needs
-            // the line is wrapped anyway only when the text area's height is larger than one of its containers
-            //javafx's word wrap algo tries very hard to start each newly wrapped line on non-space characters
-            //(I've only see it do otherwise when there were too many spaces in a row to do otherwise)
-            val calcedRows = textArea.paragraphs.fold(0) { acc: Int, line: CharSequence ->
-                //work out how many wrapped lines each non-empty 'paragraph' takes up
-/*                    if(line.isNotEmpty()) {
-                        print("line \"${line.substring(0, min(line.length, 10))}\"... ")
-                    }else print("empty line ")
-                    println("width: $lineWidth; wrapped lines: $linesWhenWrapped")*/
-                val selfWrappedLines = estimateWordBoundaryAwareWrapping(fontMetrics, line.toString(),
-                //take into account the horizontal space lost to the TextArea's potential scroll bar
-                    COLUMN_WIDTH-SCROLLBAR_WIDTH)
-                if(note.title == "Design Document.md") selfWrappedLines.forEach { println(it) }
-                acc + selfWrappedLines.size
-            }
-            val calcedHeight = calcedRows.toDouble() * fontMetrics.lineHeight
-            val calcedHeightMultiplied = (calcedRows.toDouble() * fontMetrics.lineHeight) * 1.1
-            val calcedHeightWithAddition = calcedRows.toDouble() * (fontMetrics.lineHeight + 1.25/*Calculated through sheer fucking trial and error.*/)
-            val taeFuck = textArea.getTaeFuck(COLUMN_WIDTH)
-            //val cvh = textArea.guess3(COLUMN_WIDTH)
-            //textArea.prefRowCount = calcedRows
             textArea.prefHeightProperty().bind(textArea.doubleBinding)
-            /*val prismTextLayout = PrismTextLayout().apply {
-                setContent(textArea.text, textArea.font.impl_getNativeFont())
-            }*/
 
             val text = Text()
             text.font = textArea.font
@@ -219,9 +118,7 @@ class Kotban : Application() {
             //textArea.prefHeight = emulationByJavaFxText
             /*if(note.title == "Design Document.md") { textArea.prefHeight = 4804.0
             }else{textArea.prefRowCount = prismTextLayout.lines.size}*/
-            println("\t\"${note.title}\" calced rows: $calcedRows;" +
-                    " calced height: $calcedHeight; taeFukt height: $taeFuck; with addition: $calcedHeightWithAddition;" +
-                    " multiplied: $calcedHeightMultiplied; actual height: ${textArea.prefHeight};"+
+            println("\t\"${note.title}\" actual height: ${textArea.prefHeight};"+
                     " emulationByJavaFxText: $emulationByJavaFxText")
 
             //val length = fontMetrics.computeStringWidth(textArea.text)
