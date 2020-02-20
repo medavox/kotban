@@ -103,7 +103,8 @@ class Kotban : Application() {
     /**Generates the UI component hierarchy for a single Note.*/
     private fun uiOf(note:Note): Node = TitledPane().apply {
         text = note.title
-        content = (if(note.title == "Design Document.md") TextAria(note.contents, true) else TextAria(note.contents)).also { textArea ->
+        isExpanded = false
+        content = TextAria(note.contents).also { textArea ->
             textArea.isEditable=false
             textArea.isWrapText = true
             textArea.prefHeightProperty().bind(textArea.doubleBinding)
