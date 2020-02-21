@@ -50,6 +50,7 @@ class Kotban : Application() {
     private val dir = "./testboard"
     val dirFile = File(dir)
     private lateinit var contentContainer: ScrollPane
+    private lateinit var mainButtonBar: ButtonBar
     val COLUMN_WIDTH = 300.0
     //discovered through experimentation.
     val SCROLLBAR_WIDTH = 40
@@ -59,22 +60,20 @@ class Kotban : Application() {
     override fun start(primaryStage:Stage) {
 
         val root = VBox()
-        val colScrol = ScrollPane().apply {//horizontal scrollpane for columns
-            contentContainer = this
-
+        contentContainer = ScrollPane().apply {//horizontal scrollpane for columns
             prefViewportWidthProperty().bind(root.widthProperty())
             isFitToHeight = true
             //content = layoutColumnContents(board.columns)
         }
 
-        val mainButtonBar = ButtonBar().apply {
+        mainButtonBar = ButtonBar().apply {
             //bar.nodeOrientation = NodeOrientation.LEFT_TO_RIGHT
             buttons.addAll(
                 Button("Refresh").apply{
                     setOnMouseClicked {
                         val board = Board.loadFrom(dirFile)
                         primaryStage.title = board.name+" - Kotban"
-                        colScrol.content = layoutColumnContents(board.columns)
+                        contentContainer.content = layoutColumnContents(board.columns)
                     }
                 },
                 Button("New Column").apply{setOnAction {
@@ -88,15 +87,15 @@ class Kotban : Application() {
             )
         }
 
-        colScrol.prefViewportHeightProperty().bind(root.heightProperty().subtract(mainButtonBar.heightProperty()))
+        contentContainer.prefViewportHeightProperty().bind(root.heightProperty().subtract(mainButtonBar.heightProperty()))
 
         root.children.add(mainButtonBar)
-        root.children.add(colScrol)
+        root.children.add(contentContainer)
         primaryStage.scene = Scene(root, 600.0, 600.0)
         val board = Board.loadFrom(dirFile)
         primaryStage.title = board.name+" - Kotban"
         primaryStage.show()//stage must be shown before colscrol content is rendered, for some reason
-        colScrol.content = layoutColumnContents(board.columns)
+        contentContainer.content = layoutColumnContents(board.columns)
     }
 
     //IMPORTANT: the scrollbar for TextAreas is defined as a scrollpane inside TextAreaSkin.
@@ -193,15 +192,15 @@ class Kotban : Application() {
             notesScrollPane.prefViewportWidth = COLUMN_WIDTH
             notesScrollPane.isFitToWidth = true
             notesScrollPane.content = VBox().apply {
-                if(column.notes.isEmpty()) {
+                if(column.notes.isEmpty() || contentContainer.height >= notesScrollPane.height) {
                     //expand empty columns to fill the vertical space,
                     // so notes can be dragged into them
                     prefHeightProperty().bind(contentContainer.heightProperty().
-                        subtract(columnButtonBar.heightProperty()))
-                    notesScrollPane.vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
-                }else {
-                    notesScrollPane.vbarPolicy = ScrollPane.ScrollBarPolicy.ALWAYS
+                        subtract(columnButtonBar.heightProperty()).
+                        subtract(mainButtonBar.heightProperty())
+                    )
                 }
+                notesScrollPane.vbarPolicy = ScrollPane.ScrollBarPolicy.ALWAYS
                 notesScrollPane.hbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
                 onDragOver = EventHandler { event ->
                     /* accept only if it's not dragged from the same node,
