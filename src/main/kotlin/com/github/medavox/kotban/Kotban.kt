@@ -1,8 +1,6 @@
 package com.github.medavox.kotban
 
 import com.github.medavox.kotban.textaria.TextAria
-import com.sun.javafx.tk.FontMetrics
-import com.sun.javafx.tk.Toolkit
 import javafx.application.Application
 import javafx.event.EventHandler
 import javafx.scene.Node
@@ -21,8 +19,6 @@ import java.io.File
 
 //todo:
 // line numbers in note contents
-// (fix) vertical scrollbars on columns that aren't tall enough to need them,
-//   but which disappear after a refresh
 // click-to-maximise a single note
 // tags - supported through a custom line in the note's text
 // filter by tag
@@ -35,8 +31,6 @@ import java.io.File
 // when dragging a note, auto-scroll when the mouse is near the window's edge
 // user can choose kanban directory
 // (fix) prevent a drag-move from overwriting an existing file with the same name
-// (fix) very long notes still have scrollbars,
-//   cause scrollbars to appear on other notes in the same column
 // button: Expand/collapse all notes
 // a way to minimise a column (hide it like notes can be hidden)
 /**terminology:
@@ -191,11 +185,16 @@ class Kotban : Application() {
         colContainer.children.add(ScrollPane().also { notesScrollPane ->
             notesScrollPane.prefViewportWidth = COLUMN_WIDTH
             notesScrollPane.isFitToWidth = true
+
+            notesScrollPane.prefHeightProperty().bind(contentContainer.heightProperty().
+                subtract(columnButtonBar.heightProperty()).
+                subtract(mainButtonBar.heightProperty())
+            )
             notesScrollPane.content = VBox().apply {
                 if(column.notes.isEmpty() || contentContainer.height >= notesScrollPane.height) {
                     //expand empty columns to fill the vertical space,
                     // so notes can be dragged into them
-                    prefHeightProperty().bind(contentContainer.heightProperty().
+                    minHeightProperty().bind(contentContainer.heightProperty().
                         subtract(columnButtonBar.heightProperty()).
                         subtract(mainButtonBar.heightProperty())
                     )
