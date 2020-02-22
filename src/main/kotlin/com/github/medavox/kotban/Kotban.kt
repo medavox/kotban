@@ -99,6 +99,7 @@ class Kotban : Application() {
     private fun uiOf(note:Note): Node = TitledPane().apply {
         text = note.title
         isExpanded = false
+        isAnimated = false
         content = TextAria(note.contents).also { textArea ->
             textArea.isEditable=false
             textArea.isWrapText = true
