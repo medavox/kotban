@@ -13,6 +13,7 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.scene.text.Text
 import javafx.scene.text.TextAlignment
+import javafx.stage.DirectoryChooser
 import javafx.stage.Stage
 import java.io.File
 
@@ -32,6 +33,7 @@ import java.io.File
 // user can choose kanban directory
 // (fix) prevent a drag-move from overwriting an existing file with the same name
 // button: Expand/collapse all notes
+//  all in column, or all in all columns?
 // a way to minimise a column (hide it like notes can be hidden)
 /**terminology:
  * board: the whole thing. A folder with subfolders that each contain 0 or more text files
@@ -42,7 +44,7 @@ import java.io.File
  * @see [https://docs.oracle.com/javase/8/javafx/api](JavaFX javadoc)*/
 class Kotban : Application() {
     private val dir = "./testboard"
-    val dirFile = File(dir)
+    private var chosenDirFile:File? = null
     private lateinit var contentContainer: ScrollPane
     private lateinit var mainButtonBar: ButtonBar
     val COLUMN_WIDTH = 300.0
@@ -63,19 +65,33 @@ class Kotban : Application() {
         mainButtonBar = ButtonBar().apply {
             //bar.nodeOrientation = NodeOrientation.LEFT_TO_RIGHT
             buttons.addAll(
-                Button("Refresh").apply{
-                    setOnMouseClicked {
-                        val board = Board.loadFrom(dirFile)
-                        primaryStage.title = board.name+" - Kotban"
-                        contentContainer.content = layoutColumnContents(board.columns)
+                Button("Open Board…").apply{setOnAction {
+                    val dc = DirectoryChooser()
+                    dc.initialDirectory = File(System.getProperty("user.home", "."))
+                    dc.title = "Choose a board directory"
+                    chosenDirFile = dc.showDialog(null)
+                    chosenDirFile?.let {
+                        val board = Board.loadFrom(it)
+                        primaryStage.title = board.name + " - Kotban"
+                        contentContainer.content = layoutColumnContents(board.columns, it)
                     }
-                },
-                Button("New Column").apply{setOnAction {
-                    promptForFileName(true, dirFile,
-                        "Name of new column:", "New column"
-                    )?.let {
-                        it.mkdir()
-                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+                }},
+                Button("Refresh").apply{ setOnAction {
+                    chosenDirFile?.let {
+                        val board = Board.loadFrom(it)
+                        primaryStage.title = board.name + " - Kotban"
+                        contentContainer.content = layoutColumnContents(board.columns, it)
+                    }
+                }},
+                Button("New Column").apply{ setOnAction {
+                    chosenDirFile?.let { dirFileNotNull ->
+                        promptForFileName(
+                            true, dirFileNotNull,
+                            "Name of new column:", "New column"
+                        )?.let {
+                            it.mkdir()
+                            contentContainer.content = layoutColumnContents(Board.loadFrom(dirFileNotNull).columns, it)
+                        }
                     }
                 }}
             )
@@ -86,17 +102,18 @@ class Kotban : Application() {
         root.children.add(mainButtonBar)
         root.children.add(contentContainer)
         primaryStage.scene = Scene(root, 600.0, 600.0)
-        val board = Board.loadFrom(dirFile)
-        primaryStage.title = board.name+" - Kotban"
+        //val board = Board.loadFrom(dirFile)
+        primaryStage.title = "Kotban"
+        //primaryStage.title = board.name+" - Kotban"
         primaryStage.show()//stage must be shown before colscrol content is rendered, for some reason
-        contentContainer.content = layoutColumnContents(board.columns)
+        //contentContainer.content = layoutColumnContents(board.columns)
     }
 
     //IMPORTANT: the scrollbar for TextAreas is defined as a scrollpane inside TextAreaSkin.
     //this is also my best lead on word wrapping: it's done by this scrollpane, and is called fitToWidth
 
     /**Generates the UI component hierarchy for a single Note.*/
-    private fun uiOf(note:Note): Node = TitledPane().apply {
+    private fun uiOf(note:Note, dirFile:File): Node = TitledPane().apply {
         text = note.title
         isExpanded = false
         isAnimated = false
@@ -130,7 +147,7 @@ class Kotban : Application() {
                     "rename note file \n\'${note.file.name}\'", note.file.name
                 )?.let {
                     note.file.renameTo(it)
-                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
                 }
             }},
             MenuItem("Delete note").apply{setOnAction{
@@ -140,7 +157,7 @@ class Kotban : Application() {
                 }.showAndWait()
                 if(confirmation.isPresent && confirmation.get() == ButtonType.OK) {
                     note.file.delete()
-                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
                 }
             }}
         )
@@ -160,7 +177,7 @@ class Kotban : Application() {
         }
     }
 
-    private fun uiOf(column:Column):Node = VBox().also { colContainer ->
+    private fun uiOf(column:Column, dirFile:File):Node = VBox().also { colContainer ->
         val columnButtonBar = HBox().also { bar ->
             bar.children.addAll(
                 Label(column.name+" - "+column.notes.size).apply{
@@ -176,7 +193,7 @@ class Kotban : Application() {
                             "Name of new note:", "new note.txt"
                         )?.let {
                             it.createNewFile()
-                            contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+                            contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
                         }
                     }})
                 }
@@ -220,7 +237,7 @@ class Kotban : Application() {
                         println("files: ${db.files}")
                         db.files[0].renameTo(File(column.folder, db.files[0].name))
                         success = true
-                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)//todo: figure out how to do UI refresh here
+                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)//todo: figure out how to do UI refresh here
                     }
                     /* let the source know whether the string was successfully
                          * transferred and used */
@@ -228,23 +245,23 @@ class Kotban : Application() {
                     event.consume()
                 }
                 for (note in column.notes) {
-                    children.add(uiOf(note))
+                    children.add(uiOf(note, dirFile))
                 }
             }
         })
-        val contextMenu = contextMenuFor(column)
+        val contextMenu = contextMenuFor(column, dirFile)
         colContainer.onContextMenuRequested = EventHandler {
             contextMenu.show(colContainer, it.screenX, it.screenY)
         }
     }
 
-    private fun contextMenuFor(column:Column):ContextMenu = ContextMenu(
+    private fun contextMenuFor(column:Column, dirFile:File):ContextMenu = ContextMenu(
         MenuItem("Rename Column").apply{setOnAction{
             promptForFileName(true, dirFile,
                 "Rename column \'${column.name}\' to:", column.name
             )?.let {
                 column.folder.renameTo(it)
-                contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+                contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
             }
         }},
         MenuItem("Delete Column").apply{setOnAction{
@@ -266,21 +283,21 @@ class Kotban : Application() {
                         //we have to do our own recursive delete
                         column.folder.recursivelyDelete()
                         println("deleted column ${column.name}")
-                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
                     }
                 }else {
                     //column has no notes, so just delete it
                     column.folder.delete()
-                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns)
+                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
                 }
             }
         }}
     )
 
-    private fun layoutColumnContents(columns:List<Column>):HBox {
+    private fun layoutColumnContents(columns:List<Column>, dirFile:File):HBox {
         val uiColumns = HBox()
         for(column in columns) {
-            uiColumns.children.add(uiOf(column))
+            uiColumns.children.add(uiOf(column, dirFile))
         }
         return uiColumns
     }
