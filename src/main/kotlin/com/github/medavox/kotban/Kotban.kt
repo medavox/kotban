@@ -67,7 +67,8 @@ class Kotban : Application() {
             buttons.addAll(
                 Button("Open Board…").apply{setOnAction {
                     val dc = DirectoryChooser()
-                    dc.initialDirectory = File(System.getProperty("user.home", "."))
+                    //use the directory of the previous choice, if we've made one
+                    dc.initialDirectory = chosenDirFile?.parentFile ?: File(System.getProperty("user.home", "."))
                     dc.title = "Choose a board directory"
                     chosenDirFile = dc.showDialog(null)
                     chosenDirFile?.let {
