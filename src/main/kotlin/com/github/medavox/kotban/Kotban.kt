@@ -5,7 +5,6 @@ import javafx.animation.KeyFrame
 import javafx.animation.Timeline
 import javafx.application.Application
 import javafx.event.EventHandler
-import javafx.geometry.Orientation
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.*
@@ -15,8 +14,6 @@ import javafx.scene.input.DragEvent
 import javafx.scene.input.TransferMode
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
-import javafx.scene.text.Text
-import javafx.scene.text.TextAlignment
 import javafx.stage.DirectoryChooser
 import javafx.stage.Stage
 import javafx.util.Duration
@@ -35,7 +32,6 @@ import java.io.File
 // togglable MarkDown preview for .md files
 // allow dragging to a specific placement in the column?
 //   goes against our "ordering is alphabetical only" approach
-// when dragging a note, auto-scroll when the mouse is near the window's edge
 // (fix) prevent a drag-move from overwriting an existing file with the same name
 // button: Expand/collapse all notes in a single column
 // a way to minimise a column (hide it like notes can be hidden)
@@ -54,7 +50,7 @@ class Kotban : Application() {
     private var scrollVelocity:Double = 0.0
 
     val COLUMN_WIDTH = 300.0
-    val EDGE_DRAG_SCROLLING_MARGIN = 40.0
+    val EDGE_DRAG_SCROLLING_MARGIN = 64.0
 
     /*Instead of making entries editable (and effectively having to write our own text editor),
     * make each entry, upon being clicked, open itself in the user's choice of editor.
@@ -78,13 +74,16 @@ class Kotban : Application() {
 
             setOnDragOver {event: DragEvent ->
                 //Higher speed value = slower scroll.
-                val speed = 80
+                val speed = 70
+                val minDistanceFromRightEdge = this.width - EDGE_DRAG_SCROLLING_MARGIN
                 if(event.x < EDGE_DRAG_SCROLLING_MARGIN) {//dragging is occurring near the left edge; scroll left
-                    scrollVelocity = -1.0 / speed
+                    val distanceMultiplier = (EDGE_DRAG_SCROLLING_MARGIN - event.x) / EDGE_DRAG_SCROLLING_MARGIN
+                    scrollVelocity = (-1.0 / speed) * distanceMultiplier
                     scrollTimeline.play()
                 }
-                else if (event.x > (this.width - EDGE_DRAG_SCROLLING_MARGIN)) {//near right edge, so scroll right
-                    scrollVelocity = 1.0 / speed
+                else if (event.x > minDistanceFromRightEdge) {//near right edge, so scroll right
+                    val distanceMultiplier = (event.x - minDistanceFromRightEdge) / EDGE_DRAG_SCROLLING_MARGIN
+                    scrollVelocity = (1.0 / speed) * distanceMultiplier
                     scrollTimeline.play()
                 }
                 else {//dragging is occurring near neither edge; stop scrolling
