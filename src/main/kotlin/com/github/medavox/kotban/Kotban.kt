@@ -103,7 +103,7 @@ class Kotban : Application() {
 
         root.children.add(mainButtonBar)
         root.children.add(contentContainer)
-        primaryStage.scene = Scene(root, 600.0, 600.0)
+        primaryStage.scene = Scene(root, 800.0, 600.0)
         //val board = Board.loadFrom(dirFile)
         primaryStage.title = "Kotban"
         //primaryStage.title = board.name+" - Kotban"
