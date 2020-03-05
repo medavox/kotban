@@ -43,10 +43,10 @@ import java.io.File
  * Note that after Java 8, JavaFX was made an external library.
  * @see [https://docs.oracle.com/javase/8/javafx/api](JavaFX javadoc)*/
 class Kotban : Application() {
-    private val dir = "./testboard"
     private var chosenDirFile:File? = null
     private lateinit var contentContainer: ScrollPane
     private lateinit var mainButtonBar: ButtonBar
+    private var allNoteNodes:MutableSet<TitledPane> = mutableSetOf()
     val COLUMN_WIDTH = 300.0
     //discovered through experimentation.
     val SCROLLBAR_WIDTH = 40
@@ -59,7 +59,6 @@ class Kotban : Application() {
         contentContainer = ScrollPane().apply {//horizontal scrollpane for columns
             prefViewportWidthProperty().bind(root.widthProperty())
             isFitToHeight = true
-            //content = layoutColumnContents(board.columns)
         }
 
         mainButtonBar = ButtonBar().apply {
@@ -83,6 +82,9 @@ class Kotban : Application() {
                         primaryStage.title = board.name + " - Kotban"
                         contentContainer.content = layoutColumnContents(board.columns, it)
                     }
+                }},
+                Button("Expand/Collapse All").apply{ setOnAction {
+                    allNoteNodes.forEach { it.isExpanded = !it.isExpanded }
                 }},
                 Button("New Column").apply{ setOnAction {
                     chosenDirFile?.let { dirFileNotNull ->
@@ -176,6 +178,7 @@ class Kotban : Application() {
 
             event.consume()
         }
+        allNoteNodes.add(this)
     }
 
     private fun uiOf(column:Column, dirFile:File):Node = VBox().also { colContainer ->
@@ -238,7 +241,7 @@ class Kotban : Application() {
                         println("files: ${db.files}")
                         db.files[0].renameTo(File(column.folder, db.files[0].name))
                         success = true
-                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)//todo: figure out how to do UI refresh here
+                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
                     }
                     /* let the source know whether the string was successfully
                          * transferred and used */
@@ -297,6 +300,7 @@ class Kotban : Application() {
 
     private fun layoutColumnContents(columns:List<Column>, dirFile:File):HBox {
         val uiColumns = HBox()
+        allNoteNodes = mutableSetOf()//reset collection of all nodes, in case there was one before
         for(column in columns) {
             uiColumns.children.add(uiOf(column, dirFile))
         }
