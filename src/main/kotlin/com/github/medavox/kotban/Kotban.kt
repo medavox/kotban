@@ -170,6 +170,7 @@ class Kotban : Application() {
         onDragDetected = EventHandler {event ->
             //println("drag detected:$it")
             val dragBoard = startDragAndDrop(TransferMode.MOVE)
+            dragBoard.dragView = (event.source as Node).snapshot(null, null)
             println("dragBoard:$dragBoard")
             //put a file on the dragboard
             val content = ClipboardContent()
