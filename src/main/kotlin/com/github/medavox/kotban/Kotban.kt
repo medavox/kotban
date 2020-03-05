@@ -147,9 +147,6 @@ class Kotban : Application() {
         //contentContainer.content = layoutColumnContents(board.columns)
     }
 
-    //IMPORTANT: the scrollbar for TextAreas is defined as a scrollpane inside TextAreaSkin.
-    //this is also my best lead on word wrapping: it's done by this scrollpane, and is called fitToWidth
-
     /**Generates the UI component hierarchy for a single Note.*/
     private fun uiOf(note:Note, dirFile:File): Node = TitledPane().apply {
         //text = if(note.title.length < 30) note.title else note.title.substring(0, 30)+"…"//truncate long filenames
@@ -160,22 +157,7 @@ class Kotban : Application() {
             textArea.isEditable=false
             textArea.isWrapText = true
             textArea.prefHeightProperty().bind(textArea.doubleBinding)
-
-            val text = Text()
-            text.font = textArea.font
-            text.wrappingWidth = COLUMN_WIDTH
-            text.textAlignment = TextAlignment.JUSTIFY
-            text.text = textArea.text
-            val emulationByJavaFxText = text.boundsInLocal.height
-
-            //textArea.prefHeight = emulationByJavaFxText
-            /*if(note.title == "Design Document.md") { textArea.prefHeight = 4804.0
-            }else{textArea.prefRowCount = prismTextLayout.lines.size}*/
-            println("\t\"${note.title}\" actual height: ${textArea.prefHeight};"+
-                    " emulationByJavaFxText: $emulationByJavaFxText")
-
-            //val length = fontMetrics.computeStringWidth(textArea.text)
-            //println("\'${note.title}\' height: ${it.height}; prefHeight:${it.prefHeight}")
+            //textArea.font =
         }
         contextMenu = ContextMenu(
             MenuItem("Open note in editor").apply{setOnAction{
@@ -200,9 +182,7 @@ class Kotban : Application() {
                 }
             }}
         )
-        /*setOnDragDone { println("$this: drag done:$it") }
-        setOnDragEntered { println("$this: drag entered:$it") }
-        setOnDragExited { println("$this: drag exited:$it") }*/
+
         onDragDetected = EventHandler {event ->
             //println("drag detected:$it")
             val dragBoard = startDragAndDrop(TransferMode.MOVE)
