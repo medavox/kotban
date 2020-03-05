@@ -1,13 +1,17 @@
 package com.github.medavox.kotban
 
 import com.github.medavox.kotban.textaria.TextAria
+import javafx.animation.KeyFrame
+import javafx.animation.Timeline
 import javafx.application.Application
 import javafx.event.EventHandler
+import javafx.geometry.Orientation
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.control.Alert.AlertType.CONFIRMATION
 import javafx.scene.input.ClipboardContent
+import javafx.scene.input.DragEvent
 import javafx.scene.input.TransferMode
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
@@ -15,6 +19,7 @@ import javafx.scene.text.Text
 import javafx.scene.text.TextAlignment
 import javafx.stage.DirectoryChooser
 import javafx.stage.Stage
+import javafx.util.Duration
 import java.io.File
 
 
@@ -46,9 +51,11 @@ class Kotban : Application() {
     private lateinit var contentContainer: ScrollPane
     private lateinit var mainButtonBar: ButtonBar
     private var allNoteNodes:MutableSet<TitledPane> = mutableSetOf()
+    private var scrollVelocity:Double = 0.0
+
     val COLUMN_WIDTH = 300.0
-    //discovered through experimentation.
-    val SCROLLBAR_WIDTH = 40
+    val EDGE_DRAG_SCROLLING_MARGIN = 40.0
+
     /*Instead of making entries editable (and effectively having to write our own text editor),
     * make each entry, upon being clicked, open itself in the user's choice of editor.
     * That allows us to focus on prettifying the Markdown */
@@ -58,6 +65,35 @@ class Kotban : Application() {
         contentContainer = ScrollPane().apply {//horizontal scrollpane for columns
             prefViewportWidthProperty().bind(root.widthProperty())
             isFitToHeight = true
+
+            val scrollTimeline = Timeline().also { tl ->
+                tl.cycleCount = Timeline.INDEFINITE
+                tl.keyFrames.add(KeyFrame(Duration.millis(20.0), EventHandler {
+                    var newValue = this.hvalue + scrollVelocity
+                    newValue = Math.min(newValue, 1.0)
+                    newValue = Math.max(newValue, 0.0)
+                    this.hvalue = newValue
+                }))
+            }
+
+            setOnDragOver {event: DragEvent ->
+                //Higher speed value = slower scroll.
+                val speed = 80
+                if(event.x < EDGE_DRAG_SCROLLING_MARGIN) {//dragging is occurring near the left edge; scroll left
+                    scrollVelocity = -1.0 / speed
+                    scrollTimeline.play()
+                }
+                else if (event.x > (this.width - EDGE_DRAG_SCROLLING_MARGIN)) {//near right edge, so scroll right
+                    scrollVelocity = 1.0 / speed
+                    scrollTimeline.play()
+                }
+                else {//dragging is occurring near neither edge; stop scrolling
+                    scrollVelocity = 0.0
+                    scrollTimeline.stop()
+                }
+                println("drag over event x:"+event.x)
+                event.consume()
+            }
         }
 
         mainButtonBar = ButtonBar().apply {
@@ -231,7 +267,8 @@ class Kotban : Application() {
                         //println("$this: drag over: $event")
                         event.acceptTransferModes(*TransferMode.COPY_OR_MOVE)
                     }
-                    event.consume()
+                    //now instead of consuming, allow the content container to receive the drag_over event too
+                    //event.consume()
                 }
 
                 onDragDropped = EventHandler { event ->

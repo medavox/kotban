@@ -50,7 +50,7 @@ class Main : Application() {
         sp.setupScrolling()
 
         dragMe.setOnDragDetected { event:MouseEvent ->
-            val db:Dragboard = dragMe.startDragAndDrop(TransferMode.ANY[0])
+            val db:Dragboard = dragMe.startDragAndDrop(*TransferMode.ANY)
             db.dragView = (event.source as Node).snapshot(null, null)
 
             val content = ClipboardContent()
@@ -71,17 +71,12 @@ class Main : Application() {
         scrollTimeline.cycleCount = Timeline.INDEFINITE
         scrollTimeline.keyFrames.add(KeyFrame(Duration.millis(20.0), EventHandler {
             //formerly getVerticalScrollbar()
-            var sb:ScrollBar? = null
-            for (n:Node in this.lookupAll(".scroll-bar")) {
-                if (n is ScrollBar) {
-                    if (n.orientation == Orientation.VERTICAL) {
-                        sb = n
-                    }
-                }
-            }
+            val sb:ScrollBar? = lookupAll(".scroll-bar").
+                                filterIsInstance<ScrollBar>().
+                                firstOrNull { it.orientation == Orientation.VERTICAL }
 
             //formerly dragScroll()
-            if (sb != null) {
+            sb?.let {
                 var newValue = sb.value + scrollVelocity
                 newValue = Math.min(newValue, 1.0)
                 newValue = Math.max(newValue, 0.0)
@@ -91,7 +86,7 @@ class Main : Application() {
 
         setOnDragExited { event:DragEvent ->
             scrollVelocity = if (event.y > 0) {1.0 / speed} else {-1.0 / speed}
-            if (!dropped){
+            if (!dropped) {
                 scrollTimeline.play()
             }
         }
@@ -118,6 +113,5 @@ class Main : Application() {
 
         setOnScroll { scrollTimeline.stop() }
         setOnMouseClicked { println(scrollTimeline.status) }
-
     }
 }
