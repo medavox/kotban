@@ -163,7 +163,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
         public void layoutChildren() {
             TextAria textArea = getSkinnable();
             double width = getWidth();
-            System.out.println("HERE width: "+width);
+            //System.out.println("HERE width: "+width);
 
             // Lay out paragraphs
             final double topPadding = snappedTopInset();
@@ -172,7 +172,7 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
             double wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0);
 
             double y = topPadding;
-            System.out.println("HERE  snappedTopInset: "+y);
+            //System.out.println("HERE  snappedTopInset: "+y);
 
             final List<Node> paragraphNodesChildren = paragraphNodes.getChildren();
 
@@ -188,8 +188,8 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
             }
 
             //notify as a property from here
-            System.out.println("HERE  contentView 'y': "+y);
-            System.out.println("HERE  textArea.prefHeight BEFORE: "+textArea.getPrefHeight());
+            //System.out.println("HERE  contentView 'y': "+y);
+            //System.out.println("HERE  textArea.prefHeight BEFORE: "+textArea.getPrefHeight());
             hajt.set(y);
 
             if (promptNode != null) {
