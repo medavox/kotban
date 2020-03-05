@@ -24,10 +24,10 @@ class Main : Application() {
 
     private var scrollVelocity:Double = 0.0
 
-    var dropped:Boolean = false
+    private var dropped:Boolean = false
 
     //Higher speed value = slower scroll.
-    val speed = 200
+    private val speed = 200
 
     @Throws(Exception::class)
     override fun start(primaryStage:Stage)  {
@@ -40,41 +40,41 @@ class Main : Application() {
         val innerBox = VBox()
         innerBox.setPrefSize(200.0,1000.0)
 
-        sp.setContent(innerBox)
+        sp.content = innerBox
 
-        root.setCenter(outer)
+        root.center = outer
 
-        val dragMe = Label("drag me to edge!\n"+"or drop me in scrollpane!")
-        root.setTop(dragMe)
+        val dragMe = Label("drag me to edge!\nor drop me in scrollpane!")
+        root.top = dragMe
 
         sp.setupScrolling()
 
         dragMe.setOnDragDetected { event:MouseEvent ->
             val db:Dragboard = dragMe.startDragAndDrop(TransferMode.ANY[0])
-            db.setDragView((event.getSource() as Node).snapshot(null, null))
+            db.dragView = (event.source as Node).snapshot(null, null)
 
             val content = ClipboardContent()
-            content.putString((dragMe.getText()))
+            content.putString((dragMe.text))
 
             db.setContent(content)
-            event.consume();      
+            event.consume()
         }
 
 
         val scene = Scene(root, 640.0, 480.0)
-        primaryStage.setScene(scene)
+        primaryStage.scene = scene
         primaryStage.show()
     }
 
     private fun ScrollPane.setupScrolling() {
         val scrollTimeline = Timeline()
-        scrollTimeline.setCycleCount(Timeline.INDEFINITE)
+        scrollTimeline.cycleCount = Timeline.INDEFINITE
         scrollTimeline.keyFrames.add(KeyFrame(Duration.millis(20.0), EventHandler {
             //formerly getVerticalScrollbar()
             var sb:ScrollBar? = null
             for (n:Node in this.lookupAll(".scroll-bar")) {
                 if (n is ScrollBar) {
-                    if (n.getOrientation().equals(Orientation.VERTICAL)) {
+                    if (n.orientation == Orientation.VERTICAL) {
                         sb = n
                     }
                 }
@@ -82,25 +82,18 @@ class Main : Application() {
 
             //formerly dragScroll()
             if (sb != null) {
-                var newValue = sb.getValue() + scrollVelocity
+                var newValue = sb.value + scrollVelocity
                 newValue = Math.min(newValue, 1.0)
                 newValue = Math.max(newValue, 0.0)
-                sb.setValue(newValue)
+                sb.value = newValue
             }
         }))
 
         setOnDragExited { event:DragEvent ->
-
-            if (event.getY() > 0) {
-                scrollVelocity = 1.0 / speed
-            }
-            else {
-                scrollVelocity = -1.0 / speed
-            }
+            scrollVelocity = if (event.y > 0) {1.0 / speed} else {-1.0 / speed}
             if (!dropped){
                 scrollTimeline.play()
             }
-
         }
 
         setOnDragEntered {
@@ -112,10 +105,10 @@ class Main : Application() {
             scrollTimeline.stop()
         }
         setOnDragDropped {event:DragEvent ->
-            val db:Dragboard = event.getDragboard()
-            (this.getContent() as VBox).getChildren().add(Label(db.getString()));
+            val db:Dragboard = event.dragboard
+            (this.content as VBox).children.add(Label(db.string));
             scrollTimeline.stop()
-            event.setDropCompleted(true)
+            event.isDropCompleted = true
             dropped = true
         }
 
@@ -124,7 +117,7 @@ class Main : Application() {
         }
 
         setOnScroll { scrollTimeline.stop() }
-        setOnMouseClicked { println(scrollTimeline.getStatus()) }
+        setOnMouseClicked { println(scrollTimeline.status) }
 
     }
 }
