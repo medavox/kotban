@@ -20,20 +20,19 @@ import java.io.File
 
 //todo:
 // line numbers in note contents
-// click-to-maximise a single note
+// button: maximise a single note
 // tags - supported through a custom line in the note's text
 // filter by tag
 // wrap long column names
+// wrap long note names
 // show a visual hint about where the note will go
 // monospace font?
 // togglable MarkDown preview for .md files
 // allow dragging to a specific placement in the column?
 //   goes against our "ordering is alphabetical only" approach
 // when dragging a note, auto-scroll when the mouse is near the window's edge
-// user can choose kanban directory
 // (fix) prevent a drag-move from overwriting an existing file with the same name
-// button: Expand/collapse all notes
-//  all in column, or all in all columns?
+// button: Expand/collapse all notes in a single column
 // a way to minimise a column (hide it like notes can be hidden)
 /**terminology:
  * board: the whole thing. A folder with subfolders that each contain 0 or more text files
@@ -117,6 +116,7 @@ class Kotban : Application() {
 
     /**Generates the UI component hierarchy for a single Note.*/
     private fun uiOf(note:Note, dirFile:File): Node = TitledPane().apply {
+        //text = if(note.title.length < 30) note.title else note.title.substring(0, 30)+"…"//truncate long filenames
         text = note.title
         isExpanded = false
         isAnimated = false

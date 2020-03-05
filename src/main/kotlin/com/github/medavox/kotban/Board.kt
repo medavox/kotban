@@ -16,7 +16,7 @@ data class Board(val name:String, val columns:List<Column>) {
             val dirsInDir:List<File> = dir.listFiles()?.filter { it?.isDirectory ?: false } ?: listOf<File>()
 
             if(dirsInDir.isEmpty()) {
-                throw Exception("no bin subdirs in board dir. Exiting.")
+                throw Exception("no column subdirs in board dir. Exiting.")
             }
             val subDirsWithTheirNotes:List<Column> = dirsInDir.map { subdir ->
                 //println("stuff in '$it': ${Arrays.toString(it.listFiles())}")
