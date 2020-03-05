@@ -14,6 +14,7 @@ import javafx.scene.input.DragEvent
 import javafx.scene.input.TransferMode
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
+import javafx.scene.text.Font
 import javafx.stage.DirectoryChooser
 import javafx.stage.Stage
 import javafx.util.Duration
@@ -28,7 +29,6 @@ import java.io.File
 // wrap long column names
 // wrap long note names
 // show a visual hint about where the note will go
-// monospace font?
 // togglable MarkDown preview for .md files
 // allow dragging to a specific placement in the column?
 //   goes against our "ordering is alphabetical only" approach
@@ -156,7 +156,7 @@ class Kotban : Application() {
             textArea.isEditable=false
             textArea.isWrapText = true
             textArea.prefHeightProperty().bind(textArea.doubleBinding)
-            //textArea.font =
+            textArea.font = Font.font("monospace")
         }
         contextMenu = ContextMenu(
             MenuItem("Open note in editor").apply{setOnAction{
