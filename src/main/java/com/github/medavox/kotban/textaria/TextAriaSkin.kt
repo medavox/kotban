@@ -55,7 +55,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     var doubleBinding: DoubleProperty = contentView.hajt
     private var paragraphNodes: Group = Group()
 
-    private var promptNode: Text
+    private lateinit var promptNode: Text
     private var usePromptText: ObservableBooleanValue
 
     private var caretPosition: ObservableIntegerValue
@@ -421,7 +421,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                 if (width == -1.0) {//FIXME: never check floating point for equality
                     wrappingWidth = 0.0
                 } else {
-                    wrappingWidth = Math.max(width - (snappedLeftInset() + snappedRightInset()), 0)
+                    wrappingWidth = Math.max(width - (snappedLeftInset() + snappedRightInset()), 0.0)
                 }
 
                 var prefHeight: Double = 0.0
@@ -502,7 +502,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
             // Update the selection
             val selection: IndexRange = textArea.getSelection()
-            val oldCaretBounds: Bounds = caretPath.getBoundsInParent()
+            val oldCaretBounds: Bounds? = caretPath.getBoundsInParent()
 
             selectionHighlightGroup.getChildren().clear()
 
@@ -526,7 +526,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                 if (selection.getLength() > 0) {
                     var paragraphIndex: Int = paragraphNodesChildren.size
                     var paragraphOffset: Int = textArea.getLength() + 1
-                    var paragraphNode: Text? = null
+                    var paragraphNode: Text
                     do {
                         paragraphNode = paragraphNodesChildren.get(--paragraphIndex) as Text
                         paragraphOffset -= paragraphNode.getText().length + 1
@@ -553,7 +553,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             var paragraphIndex: Int = paragraphNodesChildren.size
             var paragraphOffset: Int = textArea.getLength() + 1
 
-            var paragraphNode: Text? = null
+            var paragraphNode: Text
             do {
                 paragraphNode = paragraphNodesChildren.get(--paragraphIndex) as Text
                 paragraphOffset -= paragraphNode.getText().length + 1
@@ -692,15 +692,12 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     override fun getCharacter(index:Int):Char {
-        val n: Int = paragraphNodes.getChildren().size
-
-        var paragraphIndex: Int = 0
         var offset: Int = index
 
-        var paragraph: String? = null
-        while (paragraphIndex < n) {
-            val paragraphNode: Text = paragraphNodes.getChildren().get(paragraphIndex) as Text
-            paragraph = paragraphNode.getText()
+        //var paragraph: String = paragraphNodes.children.first { offset < (it as Text).text.length +1  }
+        lateinit var paragraph: String
+        for (i in 0 until paragraphNodes.children.size) {
+            paragraph = (paragraphNodes.children[i] as Text).text
             val count: Int = paragraph.length + 1
 
             if (offset < count) {
@@ -708,7 +705,6 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             }
 
             offset -= count
-            paragraphIndex++
         }
 
         return if(offset == paragraph.length) '\n' else paragraph[offset]
@@ -804,7 +800,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         var paragraphIndex: Int = paragraphNodes.getChildren().size
         var paragraphOffset: Int = textArea.getLength() + 1
 
-        var paragraphNode: Text? = null
+        var paragraphNode: Text
         do {
             paragraphNode = paragraphNodes.getChildren().get(--paragraphIndex) as Text
             paragraphOffset -= paragraphNode.getText().length + 1
@@ -956,11 +952,9 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         return hit
     }
 
-    override fun nextCharacterVisually(moveRight: Boolean) {
-        if (isRTL()) {
-            // Text node is mirrored.
-            moveRight = !moveRight
-        }
+    override fun nextCharacterVisually(muvRajt: Boolean) {
+        // mirror Text node if we're in Right-To-Left
+        val moveRight = if (isRTL()) !muvRajt else muvRajt
 
         val textNode: Text = getTextNode()
         var caretBounds: Bounds = caretPath.getLayoutBounds()
@@ -974,7 +968,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         val hitX: Double = if(moveRight) caretBounds.getMaxX() else caretBounds.getMinX()
         val hitY: Double = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2
         val hit: HitInfo = textNode.impl_hitTestChar(Point2D(hitX, hitY))
-        val charShape: Path = Path(textNode.impl_getRangeShape(hit.getCharIndex(), hit.getCharIndex() + 1))
+        val charShape: Path = Path(*textNode.impl_getRangeShape(hit.getCharIndex(), hit.getCharIndex() + 1))
         if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
                 (!moveRight && charShape.getLayoutBounds().getMinX() < caretBounds.getMinX())) {
             hit.setLeading(!hit.isLeading())
