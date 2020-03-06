@@ -55,7 +55,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     var doubleBinding: DoubleProperty = contentView.hajt
     private var paragraphNodes: Group = Group()
 
-    private lateinit var promptNode: Text
+    private var promptNode: Text? = null
     private var usePromptText: ObservableBooleanValue
 
     private var caretPosition: ObservableIntegerValue
@@ -69,11 +69,17 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     //was static
     private val SCROLL_RATE = 30
-
     // For dragging handles on embedded
     private var pressX: Double = 0.0
     private var pressY: Double = 0.0
     private var handlePressed: Boolean = false
+
+    /*this is not an ideal solution, but it prevents an unreproducible runtime Exception:
+    Exception in thread "JavaFX Application Thread" java.lang.IllegalAccessError:
+    tried to access field com.sun.javafx.scene.control.skin.TextInputControlSkin.SHOW_HANDLES
+    from class com.github.medavox.kotban.textaria.TextAriaSkin$ContentView
+	at com.github.medavox.kotban.textaria.TextAriaSkin$ContentView.layoutChildren(TextAriaSkin.kt:516)*/
+    private val SHOW_HANDLES = TextInputControlSkin.SHOW_HANDLES
 
     /**
      * Remembers horizontal position when traversing up / down.
@@ -299,11 +305,11 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
             selectionHandle1.setOnMouseDragged(object:EventHandler<MouseEvent> {
                 override fun handle(e: MouseEvent) {
-                    val textArea: TextAria = getSkinnable()
+                    val textArea: TextAria = skinnable
                     val textNode: Text = getTextNode()
                     val tp: Point2D = textNode.localToScene(0.0, 0.0)
-                    val p: Point2D = Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
-                        e.getSceneY() - tp.getY() - pressY + selectionHandle1.getHeight() + 5)
+                    val p: Point2D = Point2D(e.sceneX - tp.x + 10/*??*/ - pressX + selectionHandle1.width / 2,
+                        e.sceneY - tp.y - pressY + selectionHandle1.height + 5)
                     val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
                     var pos: Int = hit.getCharIndex()
                     if (textArea.getAnchor() < textArea.getCaretPosition()) {
@@ -315,12 +321,12 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                             pos = textArea.getAnchor()
                         }
                         val oldPos: Int = textNode.getImpl_caretPosition()
-                        textNode.setImpl_caretPosition(pos)
+                        textNode.impl_caretPosition = pos
                         val element: PathElement = textNode.getImpl_caretShape()[0]
                         if (element is MoveTo && (element as MoveTo).getY() > e.getY() - getTextTranslateY()) {
                             hit.setCharIndex(pos - 1)
                         }
-                        textNode.setImpl_caretPosition(oldPos)
+                        textNode.impl_caretPosition = oldPos
                     }
                     positionCaret(hit, true, false)
                     e.consume()
@@ -494,10 +500,10 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             //System.out.println("HERE  textArea.prefHeight BEFORE: "+textArea.getPrefHeight());
             hajt.set(y)
 
-            if (promptNode != null) {
-                promptNode.setLayoutX(leftPadding)
-                promptNode.setLayoutY(topPadding + promptNode.getBaselineOffset())
-                promptNode.setWrappingWidth(wrappingWidth)
+            promptNode?.let {
+                it.setLayoutX(leftPadding)
+                it.setLayoutY(topPadding + it.getBaselineOffset())
+                it.setWrappingWidth(wrappingWidth)
             }
 
             // Update the selection
@@ -652,14 +658,15 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     private fun createPromptNode() {
         if (promptNode == null && usePromptText.get()) {
-            promptNode = Text()
-            contentView.getChildren().add(0, promptNode)
-            promptNode.setManaged(false)
-            promptNode.getStyleClass().add("text")
-            promptNode.visibleProperty().bind(usePromptText)
-            promptNode.fontProperty().bind(getSkinnable().fontProperty())
-            promptNode.textProperty().bind(getSkinnable().promptTextProperty())
-            promptNode.fillProperty().bind(promptTextFill)
+            promptNode = Text().apply {
+                contentView.children.add(0, this)
+                isManaged = false
+                styleClass.add("text")
+                visibleProperty().bind(usePromptText)
+                fontProperty().bind(skinnable.fontProperty())
+                textProperty().bind(skinnable.promptTextProperty())
+                fillProperty().bind(promptTextFill)
+            }
         }
     }
 
