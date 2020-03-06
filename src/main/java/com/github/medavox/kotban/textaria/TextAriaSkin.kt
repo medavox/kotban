@@ -3,912 +3,897 @@
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 
-package com.github.medavox.kotban.textaria;
+package com.github.medavox.kotban.textaria
 
-import com.sun.javafx.scene.control.skin.TextInputControlSkin;
+import com.sun.javafx.scene.control.skin.TextInputControlSkin
 
 
-import com.sun.javafx.scene.text.HitInfo;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
-import javafx.application.Platform;
-import javafx.beans.binding.BooleanBinding;
-import javafx.beans.binding.DoubleBinding;
-import javafx.beans.binding.IntegerBinding;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.value.ObservableBooleanValue;
-import javafx.beans.value.ObservableIntegerValue;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.geometry.*;
-import javafx.scene.AccessibleAttribute;
-import javafx.scene.Group;
-import javafx.scene.Node;
-import javafx.scene.control.IndexRange;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.layout.Region;
-import javafx.scene.shape.MoveTo;
-import javafx.scene.shape.Path;
-import javafx.scene.shape.PathElement;
-import javafx.scene.text.Text;
-import javafx.util.Duration;
+import com.sun.javafx.scene.text.HitInfo
+import javafx.animation.KeyFrame
+import javafx.animation.Timeline
+import javafx.application.Platform
+import javafx.beans.binding.BooleanBinding
+import javafx.beans.binding.DoubleBinding
+import javafx.beans.binding.IntegerBinding
+import javafx.beans.property.DoubleProperty
+import javafx.beans.property.DoublePropertyBase
+import javafx.beans.value.ObservableBooleanValue
+import javafx.beans.value.ObservableIntegerValue
+import javafx.collections.ListChangeListener
+import javafx.collections.ObservableList
+import javafx.event.ActionEvent
+import javafx.event.EventHandler
+import javafx.geometry.*
+import javafx.scene.AccessibleAttribute
+import javafx.scene.Group
+import javafx.scene.Node
+import javafx.scene.control.IndexRange
+import javafx.scene.input.MouseEvent
+import javafx.scene.input.ScrollEvent
+import javafx.scene.layout.Region
+import javafx.scene.shape.MoveTo
+import javafx.scene.shape.Path
+import javafx.scene.shape.PathElement
+import javafx.scene.text.Text
+import javafx.util.Duration
 
-import java.util.List;
+import java.util.List
 
 /**
  * Text area skin.
  */
-public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavior> {
-
-    final private TextAria textArea;
-
+class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAria, TextAriaBehavior>(textArea, TextAriaBehavior(textArea)) {
     // *** NOTE: Multiple node mode is not yet fully implemented *** //
-    private final boolean USE_MULTIPLE_NODES = false;
+    private val USE_MULTIPLE_NODES = false
 
-    private double computedMinWidth = Double.NEGATIVE_INFINITY;
-    private double computedMinHeight = Double.NEGATIVE_INFINITY;
-    private double computedPrefWidth = Double.NEGATIVE_INFINITY;
-    private double computedPrefHeight = Double.NEGATIVE_INFINITY;
-    private double widthForComputedPrefHeight = Double.NEGATIVE_INFINITY;
-    private double characterWidth;
-    private double lineHeight;
+    private var computedMinWidth: Double = Double.NEGATIVE_INFINITY
+    private var computedMinHeight: Double = Double.NEGATIVE_INFINITY
+    private var computedPrefWidth: Double = Double.NEGATIVE_INFINITY
+    private var computedPrefHeight: Double = Double.NEGATIVE_INFINITY
+    private var widthForComputedPrefHeight: Double = Double.NEGATIVE_INFINITY
+    private var characterWidth: Double
+    private var lineHeight: Double
+    private var contentView: ContentView = ContentView()
+    var doubleBinding: DoubleProperty = contentView.hajt
+    private var paragraphNodes: Group = Group()
 
-    @Override protected void invalidateMetrics() {
-        computedMinWidth = Double.NEGATIVE_INFINITY;
-        computedMinHeight = Double.NEGATIVE_INFINITY;
-        computedPrefWidth = Double.NEGATIVE_INFINITY;
-        computedPrefHeight = Double.NEGATIVE_INFINITY;
+    private var promptNode: Text
+    private var usePromptText: ObservableBooleanValue
+
+    private var caretPosition: ObservableIntegerValue
+    private var selectionHighlightGroup: Group = Group()
+
+    private var oldViewportBounds: Bounds
+
+    private var scrollDirection: VerticalDirection = null
+
+    private var characterBoundingPath: Path = Path()
+
+    private var scrollSelectionTimeline: Timeline = Timeline()
+
+    static final int SCROLL_RATE = 30
+
+    private pressX: Double, pressY; // For dragging handles on embedded
+    private var handlePressed: Boolean
+
+    private EventHandler<ActionEvent> scrollSelectionHandler = event -> {
+        switch (scrollDirection) {
+            case UP: {
+                // TODO Get previous offset
+                break
+            }
+
+            case DOWN: {
+                // TODO Get next offset
+                break
+            }
+        }
     }
 
-    private class ContentView extends Region {
+    init {
+        caretPosition = IntegerBinding() {
+            { bind(textArea.caretPositionProperty()); }
+            override protected var computeValue: Int() {
+            return textArea.getCaretPosition()
+        }
+        }
+        caretPosition.addListener((observable, oldValue, newValue) -> {
+            targetCaretX = -1
+            if (newValue.intValue() > oldValue.intValue()) {
+                setForwardBias(true)
+            }
+        })
+
+        forwardBiasProperty().addListener(observable -> {
+            if (textArea.getWidth() > 0) {
+                updateTextNodeCaretPos(textArea.getCaretPosition())
+            }
+        })
+
+        // Initialize content
+        getChildren().add(contentView)
+
+        getSkinnable().addEventFilter(ScrollEvent.ANY, event -> {
+            if (event.isDirect() && handlePressed) {
+                event.consume()
+            }
+        })
+
+        // Add selection
+        selectionHighlightGroup.setManaged(false)
+        selectionHighlightGroup.setVisible(false)
+        contentView.getChildren().add(selectionHighlightGroup)
+
+        // Add content view
+        paragraphNodes.setManaged(false)
+        contentView.getChildren().add(paragraphNodes)
+
+        // Add caret
+        caretPath.setManaged(false)
+        caretPath.setStrokeWidth(1)
+        caretPath.fillProperty().bind(textFill)
+        caretPath.strokeProperty().bind(textFill)
+        // modifying visibility of the caret forces a layout-pass (RT-32373), so
+        // instead we modify the opacity.
+        caretPath.opacityProperty().bind(DoubleBinding() {
+            { bind(caretVisible); }
+            override protected var computeValue: Double() {
+            return caretVisible.get() ? 1.0 : 0.0
+        }
+        })
+        contentView.getChildren().add(caretPath)
+
+        if (SHOW_HANDLES) {
+            contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2)
+        }
+
+        // Initialize the scroll selection timeline
+        scrollSelectionTimeline.setCycleCount(Timeline.INDEFINITE)
+        List<KeyFrame> scrollSelectionFrames = scrollSelectionTimeline.getKeyFrames()
+        scrollSelectionFrames.clear()
+        scrollSelectionFrames.add(KeyFrame(Duration.millis(350), scrollSelectionHandler))
+
+        // Add initial text content
+        for (var i: Int = 0, n = USE_MULTIPLE_NODES ? textArea.getParagraphs().size() : 1; i < n; i++) {
+            var paragraph: CharSequence = (n == 1) ? textArea.textProperty().getValueSafe() : textArea.getParagraphs().get(i)
+            addParagraphNode(i, paragraph.toString())
+        }
+
+        textArea.selectionProperty().addListener((observable, oldValue, newValue) -> {
+            // TODO Why do we need two calls here?
+            textArea.requestLayout()
+            contentView.requestLayout()
+        })
+
+        textArea.wrapTextProperty().addListener((observable, oldValue, newValue) -> {
+            invalidateMetrics()
+        })
+
+        textArea.prefColumnCountProperty().addListener((observable, oldValue, newValue) -> {
+            invalidateMetrics()
+            updatePrefViewportWidth()
+        })
+
+        textArea.prefRowCountProperty().addListener((observable, oldValue, newValue) -> {
+            invalidateMetrics()
+            updatePrefViewportHeight()
+        })
+
+        updateFontMetrics()
+        fontMetrics.addListener(valueModel -> {
+            updateFontMetrics()
+        })
+
+        contentView.paddingProperty().addListener(valueModel -> {
+            updatePrefViewportWidth()
+            updatePrefViewportHeight()
+        })
+
+        if (USE_MULTIPLE_NODES) {
+            textArea.getParagraphs().addListener((ListChangeListener.Change<? : CharSequence> change) -> {
+                while (change.next()) {
+                    var from: Int = change.getFrom()
+                    var to: Int = change.getTo()
+                    List<? : CharSequence> removed = change.getRemoved()
+                    if (from < to) {
+
+                        if (removed.isEmpty()) {
+                            // This is an add
+                            for (var i: Int = from, n = to; i < n; i++) {
+                                addParagraphNode(i, change.getList().get(i).toString())
+                            }
+                        } else {
+                            // This is an update
+                            for (var i: Int = from, n = to; i < n; i++) {
+                                var node: Node = paragraphNodes.getChildren().get(i)
+                                var paragraphNode: Text = (Text) node
+                                        paragraphNode.setText(change.getList().get(i).toString())
+                            }
+                        }
+                    } else {
+                        // This is a remove
+                        paragraphNodes.getChildren().subList(from, from + removed.size()).clear()
+                    }
+                }
+            })
+        } else {
+            textArea.textProperty().addListener(observable -> {
+                invalidateMetrics()
+                ((Text)paragraphNodes.getChildren().get(0)).setText(textArea.textProperty().getValueSafe())
+                contentView.requestLayout()
+            })
+        }
+
+        usePromptText = BooleanBinding() {
+            { bind(textArea.textProperty(), textArea.promptTextProperty()); }
+            override protected var computeValue: Boolean() {
+            var txt: String = textArea.getText()
+            var promptTxt: String = textArea.getPromptText()
+            return ((txt == null || txt.isEmpty()) &&
+                    promptTxt != null && !promptTxt.isEmpty())
+        }
+        }
+
+        if (usePromptText.get()) {
+            createPromptNode()
+        }
+
+        usePromptText.addListener(observable -> {
+            createPromptNode()
+            textArea.requestLayout()
+        })
+
+        updateHighlightFill()
+        updatePrefViewportWidth()
+        updatePrefViewportHeight()
+        if (textArea.isFocused()) setCaretAnimating(true)
+
+        if (SHOW_HANDLES) {
+            selectionHandle1.setRotate(180)
+
+            EventHandler<MouseEvent> handlePressHandler = e -> {
+                pressX = e.getX()
+                pressY = e.getY()
+                handlePressed = true
+                e.consume()
+            }
+
+            EventHandler<MouseEvent> handleReleaseHandler = event -> {
+                handlePressed = false
+            }
+
+            caretHandle.setOnMousePressed(handlePressHandler)
+            selectionHandle1.setOnMousePressed(handlePressHandler)
+            selectionHandle2.setOnMousePressed(handlePressHandler)
+
+            caretHandle.setOnMouseReleased(handleReleaseHandler)
+            selectionHandle1.setOnMouseReleased(handleReleaseHandler)
+            selectionHandle2.setOnMouseReleased(handleReleaseHandler)
+
+            caretHandle.setOnMouseDragged(e -> {
+                var textNode: Text = getTextNode()
+                var tp: Point2D = textNode.localToScene(0, 0)
+                var p: Point2D = Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + caretHandle.getWidth() / 2,
+                    e.getSceneY() - tp.getY() - pressY - 6)
+                var hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
+                var pos: Int = hit.getCharIndex()
+                if (pos > 0) {
+                    var oldPos: Int = textNode.getImpl_caretPosition()
+                    textNode.setImpl_caretPosition(pos)
+                    var element: PathElement = textNode.getImpl_caretShape()[0]
+                    if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
+                        hit.setCharIndex(pos - 1)
+                    }
+                    textNode.setImpl_caretPosition(oldPos)
+                }
+                positionCaret(hit, false, false)
+                e.consume()
+            })
+
+            selectionHandle1.setOnMouseDragged(EventHandler<MouseEvent>() {
+                override fun handle(e: MouseEvent) {
+                    var textArea: TextAria = getSkinnable()
+                    var textNode: Text = getTextNode()
+                    var tp: Point2D = textNode.localToScene(0, 0)
+                    var p: Point2D = Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
+                        e.getSceneY() - tp.getY() - pressY + selectionHandle1.getHeight() + 5)
+                    var hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
+                    var pos: Int = hit.getCharIndex()
+                    if (textArea.getAnchor() < textArea.getCaretPosition()) {
+                        // Swap caret and anchor
+                        textArea.selectRange(textArea.getCaretPosition(), textArea.getAnchor())
+                    }
+                    if (pos > 0) {
+                        if (pos >= textArea.getAnchor()) {
+                            pos = textArea.getAnchor()
+                        }
+                        var oldPos: Int = textNode.getImpl_caretPosition()
+                        textNode.setImpl_caretPosition(pos)
+                        var element: PathElement = textNode.getImpl_caretShape()[0]
+                        if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
+                            hit.setCharIndex(pos - 1)
+                        }
+                        textNode.setImpl_caretPosition(oldPos)
+                    }
+                    positionCaret(hit, true, false)
+                    e.consume()
+                }
+            })
+
+            selectionHandle2.setOnMouseDragged(EventHandler<MouseEvent>() {
+                override fun handle(e: MouseEvent) {
+                    var textArea: TextAria = getSkinnable()
+                    var textNode: Text = getTextNode()
+                    var tp: Point2D = textNode.localToScene(0, 0)
+                    var p: Point2D = Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle2.getWidth() / 2,
+                        e.getSceneY() - tp.getY() - pressY - 6)
+                    var hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
+                    var pos: Int = hit.getCharIndex()
+                    if (textArea.getAnchor() > textArea.getCaretPosition()) {
+                        // Swap caret and anchor
+                        textArea.selectRange(textArea.getCaretPosition(), textArea.getAnchor())
+                    }
+                    if (pos > 0) {
+                        if (pos <= textArea.getAnchor() + 1) {
+                            pos = Math.min(textArea.getAnchor() + 2, textArea.getLength())
+                        }
+                        var oldPos: Int = textNode.getImpl_caretPosition()
+                        textNode.setImpl_caretPosition(pos)
+                        var element: PathElement = textNode.getImpl_caretShape()[0]
+                        if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
+                            hit.setCharIndex(pos - 1)
+                        }
+                        textNode.setImpl_caretPosition(oldPos)
+                        positionCaret(hit, true, false)
+                    }
+                    e.consume()
+                }
+            })
+        }
+    }
+
+
+
+    override protected fun invalidateMetrics() {
+        computedMinWidth = Double.NEGATIVE_INFINITY
+        computedMinHeight = Double.NEGATIVE_INFINITY
+        computedPrefWidth = Double.NEGATIVE_INFINITY
+        computedPrefHeight = Double.NEGATIVE_INFINITY
+    }
+
+    private class ContentView : Region() {
         {
-            getStyleClass().add("content");
+            getStyleClass().add("content")
 
             addEventHandler(MouseEvent.MOUSE_PRESSED, event -> {
-                getBehavior().mousePressed(event);
-                event.consume();
-            });
+                getBehavior().mousePressed(event)
+                event.consume()
+            })
 
             addEventHandler(MouseEvent.MOUSE_RELEASED, event -> {
-                getBehavior().mouseReleased(event);
-                event.consume();
-            });
+                getBehavior().mouseReleased(event)
+                event.consume()
+            })
 
             addEventHandler(MouseEvent.MOUSE_DRAGGED, event -> {
-                getBehavior().mouseDragged(event);
-                event.consume();
-            });
+                getBehavior().mouseDragged(event)
+                event.consume()
+            })
         }
 
-        @Override protected ObservableList<Node> getChildren() {
-            return super.getChildren();
+        override protected ObservableList<Node> getChildren() {
+            return super.getChildren()
         }
 
-        @Override public Orientation getContentBias() {
-            return Orientation.HORIZONTAL;
+        override fun getContentBias(): Orientation {
+            return Orientation.HORIZONTAL
         }
 
-        @Override protected double computePrefWidth(double height) {
+        override protected fun computePrefWidth(height: Double): Double {
             if (computedPrefWidth < 0) {
-                double prefWidth = 0;
+                var prefWidth: Double = 0
 
-                for (Node node : paragraphNodes.getChildren()) {
-                    Text paragraphNode = (Text)node;
+                for (var node: Node : paragraphNodes.getChildren()) {
+                    var paragraphNode: Text = (Text)node
                     prefWidth = Math.max(prefWidth,
                             Utils.computeTextWidth(paragraphNode.getFont(),
-                                    paragraphNode.getText(), 0));
+                                    paragraphNode.getText(), 0))
                 }
 
-                prefWidth += snappedLeftInset() + snappedRightInset();
+                prefWidth += snappedLeftInset() + snappedRightInset()
 
-                computedPrefWidth = prefWidth;
+                computedPrefWidth = prefWidth
             }
-            return computedPrefWidth;
+            return computedPrefWidth
         }
 
-        @Override
-        protected double computePrefHeight(double width) {
+        override protected fun computePrefHeight(width: Double): Double {
             if (width != widthForComputedPrefHeight) {
-                invalidateMetrics();
-                widthForComputedPrefHeight = width;
+                invalidateMetrics()
+                widthForComputedPrefHeight = width
             }
 
             if (computedPrefHeight < 0) {
-                double wrappingWidth;
+                var wrappingWidth: Double
                 if (width == -1) {
-                    wrappingWidth = 0;
+                    wrappingWidth = 0
                 } else {
-                    wrappingWidth = Math.max(width - (snappedLeftInset() + snappedRightInset()), 0);
+                    wrappingWidth = Math.max(width - (snappedLeftInset() + snappedRightInset()), 0)
                 }
 
-                double prefHeight = 0;
+                var prefHeight: Double = 0
 
-                for (Node node : paragraphNodes.getChildren()) {
-                    Text paragraphNode = (Text)node;
+                for (var node: Node : paragraphNodes.getChildren()) {
+                    var paragraphNode: Text = (Text)node
                     prefHeight += Utils.computeTextHeight(
                             paragraphNode.getFont(),
                             paragraphNode.getText(),
                             wrappingWidth,
-                            paragraphNode.getBoundsType());
+                            paragraphNode.getBoundsType())
                 }
 
-                prefHeight += snappedTopInset() + snappedBottomInset();
+                prefHeight += snappedTopInset() + snappedBottomInset()
 
-                computedPrefHeight = prefHeight;
+                computedPrefHeight = prefHeight
             }
-            return computedPrefHeight;
+            return computedPrefHeight
         }
 
-        @Override protected double computeMinWidth(double height) {
+        override protected fun computeMinWidth(height: Double): Double {
             if (computedMinWidth < 0) {
-                double hInsets = snappedLeftInset() + snappedRightInset();
-                computedMinWidth = Math.min(characterWidth + hInsets, computePrefWidth(height));
+                var hInsets: Double = snappedLeftInset() + snappedRightInset()
+                computedMinWidth = Math.min(characterWidth + hInsets, computePrefWidth(height))
             }
-            return computedMinWidth;
+            return computedMinWidth
         }
 
-        @Override protected double computeMinHeight(double width) {
+        override protected fun computeMinHeight(width: Double): Double {
             if (computedMinHeight < 0) {
-                double vInsets = snappedTopInset() + snappedBottomInset();
-                computedMinHeight = Math.min(lineHeight + vInsets, computePrefHeight(width));
+                var vInsets: Double = snappedTopInset() + snappedBottomInset()
+                computedMinHeight = Math.min(lineHeight + vInsets, computePrefHeight(width))
             }
-            return computedMinHeight;
+            return computedMinHeight
         }
 
-        @Override
-        public void layoutChildren() {
-            TextAria textArea = getSkinnable();
-            double width = getWidth();
+        override fun layoutChildren() {
+            var textArea: TextAria = getSkinnable()
+            var width: Double = getWidth()
             //System.out.println("HERE width: "+width);
 
             // Lay out paragraphs
-            final double topPadding = snappedTopInset();
-            final double leftPadding = snappedLeftInset();
+            val topPadding: Double = snappedTopInset()
+            val leftPadding: Double = snappedLeftInset()
 
-            double wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0);
+            var wrappingWidth: Double = Math.max(width - (leftPadding + snappedRightInset()), 0)
 
-            double y = topPadding;
+            var y: Double = topPadding
             //System.out.println("HERE  snappedTopInset: "+y);
 
-            final List<Node> paragraphNodesChildren = paragraphNodes.getChildren();
+            final List<Node> paragraphNodesChildren = paragraphNodes.getChildren()
 
-            for (int i = 0; i < paragraphNodesChildren.size(); i++) {
-                Node node = paragraphNodesChildren.get(i);
-                Text paragraphNode = (Text)node;
-                paragraphNode.setWrappingWidth(wrappingWidth);
+            for (var i: Int = 0; i < paragraphNodesChildren.size(); i++) {
+                var node: Node = paragraphNodesChildren.get(i)
+                var paragraphNode: Text = (Text)node
+                paragraphNode.setWrappingWidth(wrappingWidth)
 
-                Bounds bounds = paragraphNode.getBoundsInLocal();
-                paragraphNode.setLayoutX(leftPadding);
-                paragraphNode.setLayoutY(y);
-                y += bounds.getHeight();
+                var bounds: Bounds = paragraphNode.getBoundsInLocal()
+                paragraphNode.setLayoutX(leftPadding)
+                paragraphNode.setLayoutY(y)
+                y += bounds.getHeight()
             }
 
             //notify as a property from here
             //System.out.println("HERE  contentView 'y': "+y);
             //System.out.println("HERE  textArea.prefHeight BEFORE: "+textArea.getPrefHeight());
-            hajt.set(y);
+            hajt.set(y)
 
             if (promptNode != null) {
-                promptNode.setLayoutX(leftPadding);
-                promptNode.setLayoutY(topPadding + promptNode.getBaselineOffset());
-                promptNode.setWrappingWidth(wrappingWidth);
+                promptNode.setLayoutX(leftPadding)
+                promptNode.setLayoutY(topPadding + promptNode.getBaselineOffset())
+                promptNode.setWrappingWidth(wrappingWidth)
             }
 
             // Update the selection
-            IndexRange selection = textArea.getSelection();
-            Bounds oldCaretBounds = caretPath.getBoundsInParent();
+            var selection: IndexRange = textArea.getSelection()
+            var oldCaretBounds: Bounds = caretPath.getBoundsInParent()
 
-            selectionHighlightGroup.getChildren().clear();
+            selectionHighlightGroup.getChildren().clear()
 
-            int caretPos = textArea.getCaretPosition();
-            int anchorPos = textArea.getAnchor();
+            var caretPos: Int = textArea.getCaretPosition()
+            var anchorPos: Int = textArea.getAnchor()
 
             if (SHOW_HANDLES) {
                 // Install and resize the handles for caret and anchor.
                 if (selection.getLength() > 0) {
                     selectionHandle1.resize(selectionHandle1.prefWidth(-1),
-                            selectionHandle1.prefHeight(-1));
+                            selectionHandle1.prefHeight(-1))
                     selectionHandle2.resize(selectionHandle2.prefWidth(-1),
-                            selectionHandle2.prefHeight(-1));
+                            selectionHandle2.prefHeight(-1))
                 } else {
                     caretHandle.resize(caretHandle.prefWidth(-1),
-                            caretHandle.prefHeight(-1));
+                            caretHandle.prefHeight(-1))
                 }
 
                 // Position the handle for the anchor. This could be handle1 or handle2.
                 // Do this before positioning the actual caret.
                 if (selection.getLength() > 0) {
-                    int paragraphIndex = paragraphNodesChildren.size();
-                    int paragraphOffset = textArea.getLength() + 1;
-                    Text paragraphNode = null;
+                    var paragraphIndex: Int = paragraphNodesChildren.size()
+                    var paragraphOffset: Int = textArea.getLength() + 1
+                    var paragraphNode: Text = null
                     do {
-                        paragraphNode = (Text)paragraphNodesChildren.get(--paragraphIndex);
-                        paragraphOffset -= paragraphNode.getText().length() + 1;
-                    } while (anchorPos < paragraphOffset);
+                        paragraphNode = (Text)paragraphNodesChildren.get(--paragraphIndex)
+                        paragraphOffset -= paragraphNode.getText().length() + 1
+                    } while (anchorPos < paragraphOffset)
 
-                    updateTextNodeCaretPos(anchorPos - paragraphOffset);
-                    caretPath.getElements().clear();
-                    caretPath.getElements().addAll(paragraphNode.getImpl_caretShape());
-                    caretPath.setLayoutX(paragraphNode.getLayoutX());
-                    caretPath.setLayoutY(paragraphNode.getLayoutY());
+                    updateTextNodeCaretPos(anchorPos - paragraphOffset)
+                    caretPath.getElements().clear()
+                    caretPath.getElements().addAll(paragraphNode.getImpl_caretShape())
+                    caretPath.setLayoutX(paragraphNode.getLayoutX())
+                    caretPath.setLayoutY(paragraphNode.getLayoutY())
 
-                    Bounds b = caretPath.getBoundsInParent();
+                    var b: Bounds = caretPath.getBoundsInParent()
                     if (caretPos < anchorPos) {
-                        selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2);
-                        selectionHandle2.setLayoutY(b.getMaxY() - 1);
+                        selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2)
+                        selectionHandle2.setLayoutY(b.getMaxY() - 1)
                     } else {
-                        selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
-                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1);
+                        selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2)
+                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1)
                     }
                 }
             }
 
             {
                 // Position caret
-                int paragraphIndex = paragraphNodesChildren.size();
-                int paragraphOffset = textArea.getLength() + 1;
+                var paragraphIndex: Int = paragraphNodesChildren.size()
+                var paragraphOffset: Int = textArea.getLength() + 1
 
-                Text paragraphNode = null;
+                var paragraphNode: Text = null
                 do {
-                    paragraphNode = (Text)paragraphNodesChildren.get(--paragraphIndex);
-                    paragraphOffset -= paragraphNode.getText().length() + 1;
-                } while (caretPos < paragraphOffset);
+                    paragraphNode = (Text)paragraphNodesChildren.get(--paragraphIndex)
+                    paragraphOffset -= paragraphNode.getText().length() + 1
+                } while (caretPos < paragraphOffset)
 
-                updateTextNodeCaretPos(caretPos - paragraphOffset);
+                updateTextNodeCaretPos(caretPos - paragraphOffset)
 
-                caretPath.getElements().clear();
-                caretPath.getElements().addAll(paragraphNode.getImpl_caretShape());
+                caretPath.getElements().clear()
+                caretPath.getElements().addAll(paragraphNode.getImpl_caretShape())
 
-                caretPath.setLayoutX(paragraphNode.getLayoutX());
+                caretPath.setLayoutX(paragraphNode.getLayoutX())
 
                 // TODO: Remove this temporary workaround for RT-27533
-                paragraphNode.setLayoutX(2 * paragraphNode.getLayoutX() - paragraphNode.getBoundsInParent().getMinX());
+                paragraphNode.setLayoutX(2 * paragraphNode.getLayoutX() - paragraphNode.getBoundsInParent().getMinX())
 
-                caretPath.setLayoutY(paragraphNode.getLayoutY());
+                caretPath.setLayoutY(paragraphNode.getLayoutY())
                 if (oldCaretBounds == null || !oldCaretBounds.equals(caretPath.getBoundsInParent())) {
-                    scrollCaretToVisible();
+                    scrollCaretToVisible()
                 }
             }
 
             // Update selection fg and bg
-            int start = selection.getStart();
-            int end = selection.getEnd();
-            for (int i = 0, max = paragraphNodesChildren.size(); i < max; i++) {
-                Node paragraphNode = paragraphNodesChildren.get(i);
-                Text textNode = (Text)paragraphNode;
-                int paragraphLength = textNode.getText().length() + 1;
+            var start: Int = selection.getStart()
+            var end: Int = selection.getEnd()
+            for (var i: Int = 0, max = paragraphNodesChildren.size(); i < max; i++) {
+                var paragraphNode: Node = paragraphNodesChildren.get(i)
+                var textNode: Text = (Text)paragraphNode
+                var paragraphLength: Int = textNode.getText().length() + 1
                 if (end > start && start < paragraphLength) {
-                    textNode.setImpl_selectionStart(start);
-                    textNode.setImpl_selectionEnd(Math.min(end, paragraphLength));
+                    textNode.setImpl_selectionStart(start)
+                    textNode.setImpl_selectionEnd(Math.min(end, paragraphLength))
 
-                    Path selectionHighlightPath = new Path();
-                    selectionHighlightPath.setManaged(false);
-                    selectionHighlightPath.setStroke(null);
-                    PathElement[] selectionShape = textNode.getImpl_selectionShape();
+                    var selectionHighlightPath: Path = Path()
+                    selectionHighlightPath.setManaged(false)
+                    selectionHighlightPath.setStroke(null)
+                    var selectionShape: PathElement[] = textNode.getImpl_selectionShape()
                     if (selectionShape != null) {
-                        selectionHighlightPath.getElements().addAll(selectionShape);
+                        selectionHighlightPath.getElements().addAll(selectionShape)
                     }
-                    selectionHighlightGroup.getChildren().add(selectionHighlightPath);
-                    selectionHighlightGroup.setVisible(true);
-                    selectionHighlightPath.setLayoutX(textNode.getLayoutX());
-                    selectionHighlightPath.setLayoutY(textNode.getLayoutY());
-                    updateHighlightFill();
+                    selectionHighlightGroup.getChildren().add(selectionHighlightPath)
+                    selectionHighlightGroup.setVisible(true)
+                    selectionHighlightPath.setLayoutX(textNode.getLayoutX())
+                    selectionHighlightPath.setLayoutY(textNode.getLayoutY())
+                    updateHighlightFill()
                 } else {
-                    textNode.setImpl_selectionStart(-1);
-                    textNode.setImpl_selectionEnd(-1);
-                    selectionHighlightGroup.setVisible(false);
+                    textNode.setImpl_selectionStart(-1)
+                    textNode.setImpl_selectionEnd(-1)
+                    selectionHighlightGroup.setVisible(false)
                 }
-                start = Math.max(0, start - paragraphLength);
-                end   = Math.max(0, end   - paragraphLength);
+                start = Math.max(0, start - paragraphLength)
+                end   = Math.max(0, end   - paragraphLength)
             }
 
             if (SHOW_HANDLES) {
                 // Position handle for the caret. This could be handle1 or handle2 when
                 // a selection is active.
-                Bounds b = caretPath.getBoundsInParent();
+                var b: Bounds = caretPath.getBoundsInParent()
                 if (selection.getLength() > 0) {
                     if (caretPos < anchorPos) {
-                        selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
-                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1);
+                        selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2)
+                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1)
                     } else {
-                        selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2);
-                        selectionHandle2.setLayoutY(b.getMaxY() - 1);
+                        selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2)
+                        selectionHandle2.setLayoutY(b.getMaxY() - 1)
                     }
                 } else {
-                    caretHandle.setLayoutX(b.getMinX() - caretHandle.getWidth() / 2 + 1);
-                    caretHandle.setLayoutY(b.getMaxY());
+                    caretHandle.setLayoutX(b.getMinX() - caretHandle.getWidth() / 2 + 1)
+                    caretHandle.setLayoutY(b.getMaxY())
                 }
             }
 
             if (contentView.getPrefWidth() == 0 || contentView.getPrefHeight() == 0) {
-                updatePrefViewportWidth();
-                updatePrefViewportHeight();
+                updatePrefViewportWidth()
+                updatePrefViewportHeight()
                 if (getParent() != null && contentView.getPrefWidth() > 0
                         || contentView.getPrefHeight() > 0) {
                     // Force layout of viewRect in ScrollPaneSkin
-                    getParent().requestLayout();
+                    getParent().requestLayout()
                 }
             }
         }
 
-        public DoubleProperty hajt = new DoublePropertyBase() {
-            @Override
-            public Object getBean() {
-                return null;
+        var hajt: DoubleProperty = DoublePropertyBase() {
+            override fun getBean(): Object {
+                return null
             }
 
-            @Override
-            public String getName() {
-                return "my fucking height";
+            override fun getName(): String {
+                return "my fucking height"
             }
-        };
-    }
-
-    private ContentView contentView = new ContentView();
-    public DoubleProperty doubleBinding = contentView.hajt;
-    private Group paragraphNodes = new Group();
-
-    private Text promptNode;
-    private ObservableBooleanValue usePromptText;
-
-    private ObservableIntegerValue caretPosition;
-    private Group selectionHighlightGroup = new Group();
-
-    private Bounds oldViewportBounds;
-
-    private VerticalDirection scrollDirection = null;
-
-    private Path characterBoundingPath = new Path();
-
-    private Timeline scrollSelectionTimeline = new Timeline();
-    private EventHandler<ActionEvent> scrollSelectionHandler = event -> {
-        switch (scrollDirection) {
-            case UP: {
-                // TODO Get previous offset
-                break;
-            }
-
-            case DOWN: {
-                // TODO Get next offset
-                break;
-            }
-        }
-    };
-
-    public static final int SCROLL_RATE = 30;
-
-    private double pressX, pressY; // For dragging handles on embedded
-    private boolean handlePressed;
-
-    public TextAriaSkin(final TextAria textArea) {
-        super(textArea, new TextAriaBehavior(textArea));
-        this.textArea = textArea;
-
-        caretPosition = new IntegerBinding() {
-            { bind(textArea.caretPositionProperty()); }
-            @Override protected int computeValue() {
-                return textArea.getCaretPosition();
-            }
-        };
-        caretPosition.addListener((observable, oldValue, newValue) -> {
-            targetCaretX = -1;
-            if (newValue.intValue() > oldValue.intValue()) {
-                setForwardBias(true);
-            }
-        });
-
-        forwardBiasProperty().addListener(observable -> {
-            if (textArea.getWidth() > 0) {
-                updateTextNodeCaretPos(textArea.getCaretPosition());
-            }
-        });
-
-        // Initialize content
-        getChildren().add(contentView);
-
-        getSkinnable().addEventFilter(ScrollEvent.ANY, event -> {
-            if (event.isDirect() && handlePressed) {
-                event.consume();
-            }
-        });
-
-        // Add selection
-        selectionHighlightGroup.setManaged(false);
-        selectionHighlightGroup.setVisible(false);
-        contentView.getChildren().add(selectionHighlightGroup);
-
-        // Add content view
-        paragraphNodes.setManaged(false);
-        contentView.getChildren().add(paragraphNodes);
-
-        // Add caret
-        caretPath.setManaged(false);
-        caretPath.setStrokeWidth(1);
-        caretPath.fillProperty().bind(textFill);
-        caretPath.strokeProperty().bind(textFill);
-        // modifying visibility of the caret forces a layout-pass (RT-32373), so
-        // instead we modify the opacity.
-        caretPath.opacityProperty().bind(new DoubleBinding() {
-            { bind(caretVisible); }
-            @Override protected double computeValue() {
-                return caretVisible.get() ? 1.0 : 0.0;
-            }
-        });
-        contentView.getChildren().add(caretPath);
-
-        if (SHOW_HANDLES) {
-            contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
-        }
-
-        // Initialize the scroll selection timeline
-        scrollSelectionTimeline.setCycleCount(Timeline.INDEFINITE);
-        List<KeyFrame> scrollSelectionFrames = scrollSelectionTimeline.getKeyFrames();
-        scrollSelectionFrames.clear();
-        scrollSelectionFrames.add(new KeyFrame(Duration.millis(350), scrollSelectionHandler));
-
-        // Add initial text content
-        for (int i = 0, n = USE_MULTIPLE_NODES ? textArea.getParagraphs().size() : 1; i < n; i++) {
-            CharSequence paragraph = (n == 1) ? textArea.textProperty().getValueSafe() : textArea.getParagraphs().get(i);
-            addParagraphNode(i, paragraph.toString());
-        }
-
-        textArea.selectionProperty().addListener((observable, oldValue, newValue) -> {
-            // TODO Why do we need two calls here?
-            textArea.requestLayout();
-            contentView.requestLayout();
-        });
-
-        textArea.wrapTextProperty().addListener((observable, oldValue, newValue) -> {
-            invalidateMetrics();
-        });
-
-        textArea.prefColumnCountProperty().addListener((observable, oldValue, newValue) -> {
-            invalidateMetrics();
-            updatePrefViewportWidth();
-        });
-
-        textArea.prefRowCountProperty().addListener((observable, oldValue, newValue) -> {
-            invalidateMetrics();
-            updatePrefViewportHeight();
-        });
-
-        updateFontMetrics();
-        fontMetrics.addListener(valueModel -> {
-            updateFontMetrics();
-        });
-
-        contentView.paddingProperty().addListener(valueModel -> {
-            updatePrefViewportWidth();
-            updatePrefViewportHeight();
-        });
-
-        if (USE_MULTIPLE_NODES) {
-            textArea.getParagraphs().addListener((ListChangeListener.Change<? extends CharSequence> change) -> {
-                while (change.next()) {
-                    int from = change.getFrom();
-                    int to = change.getTo();
-                    List<? extends CharSequence> removed = change.getRemoved();
-                    if (from < to) {
-
-                        if (removed.isEmpty()) {
-                            // This is an add
-                            for (int i = from, n = to; i < n; i++) {
-                                addParagraphNode(i, change.getList().get(i).toString());
-                            }
-                        } else {
-                            // This is an update
-                            for (int i = from, n = to; i < n; i++) {
-                                Node node = paragraphNodes.getChildren().get(i);
-                                Text paragraphNode = (Text) node;
-                                paragraphNode.setText(change.getList().get(i).toString());
-                            }
-                        }
-                    } else {
-                        // This is a remove
-                        paragraphNodes.getChildren().subList(from, from + removed.size()).clear();
-                    }
-                }
-            });
-        } else {
-            textArea.textProperty().addListener(observable -> {
-                invalidateMetrics();
-                ((Text)paragraphNodes.getChildren().get(0)).setText(textArea.textProperty().getValueSafe());
-                contentView.requestLayout();
-            });
-        }
-
-        usePromptText = new BooleanBinding() {
-            { bind(textArea.textProperty(), textArea.promptTextProperty()); }
-            @Override protected boolean computeValue() {
-                String txt = textArea.getText();
-                String promptTxt = textArea.getPromptText();
-                return ((txt == null || txt.isEmpty()) &&
-                        promptTxt != null && !promptTxt.isEmpty());
-            }
-        };
-
-        if (usePromptText.get()) {
-            createPromptNode();
-        }
-
-        usePromptText.addListener(observable -> {
-            createPromptNode();
-            textArea.requestLayout();
-        });
-
-        updateHighlightFill();
-        updatePrefViewportWidth();
-        updatePrefViewportHeight();
-        if (textArea.isFocused()) setCaretAnimating(true);
-
-        if (SHOW_HANDLES) {
-            selectionHandle1.setRotate(180);
-
-            EventHandler<MouseEvent> handlePressHandler = e -> {
-                pressX = e.getX();
-                pressY = e.getY();
-                handlePressed = true;
-                e.consume();
-            };
-
-            EventHandler<MouseEvent> handleReleaseHandler = event -> {
-                handlePressed = false;
-            };
-
-            caretHandle.setOnMousePressed(handlePressHandler);
-            selectionHandle1.setOnMousePressed(handlePressHandler);
-            selectionHandle2.setOnMousePressed(handlePressHandler);
-
-            caretHandle.setOnMouseReleased(handleReleaseHandler);
-            selectionHandle1.setOnMouseReleased(handleReleaseHandler);
-            selectionHandle2.setOnMouseReleased(handleReleaseHandler);
-
-            caretHandle.setOnMouseDragged(e -> {
-                Text textNode = getTextNode();
-                Point2D tp = textNode.localToScene(0, 0);
-                Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + caretHandle.getWidth() / 2,
-                        e.getSceneY() - tp.getY() - pressY - 6);
-                HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
-                int pos = hit.getCharIndex();
-                if (pos > 0) {
-                    int oldPos = textNode.getImpl_caretPosition();
-                    textNode.setImpl_caretPosition(pos);
-                    PathElement element = textNode.getImpl_caretShape()[0];
-                    if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
-                        hit.setCharIndex(pos - 1);
-                    }
-                    textNode.setImpl_caretPosition(oldPos);
-                }
-                positionCaret(hit, false, false);
-                e.consume();
-            });
-
-            selectionHandle1.setOnMouseDragged(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    TextAria textArea = getSkinnable();
-                    Text textNode = getTextNode();
-                    Point2D tp = textNode.localToScene(0, 0);
-                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
-                            e.getSceneY() - tp.getY() - pressY + selectionHandle1.getHeight() + 5);
-                    HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
-                    int pos = hit.getCharIndex();
-                    if (textArea.getAnchor() < textArea.getCaretPosition()) {
-                        // Swap caret and anchor
-                        textArea.selectRange(textArea.getCaretPosition(), textArea.getAnchor());
-                    }
-                    if (pos > 0) {
-                        if (pos >= textArea.getAnchor()) {
-                            pos = textArea.getAnchor();
-                        }
-                        int oldPos = textNode.getImpl_caretPosition();
-                        textNode.setImpl_caretPosition(pos);
-                        PathElement element = textNode.getImpl_caretShape()[0];
-                        if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
-                            hit.setCharIndex(pos - 1);
-                        }
-                        textNode.setImpl_caretPosition(oldPos);
-                    }
-                    positionCaret(hit, true, false);
-                    e.consume();
-                }
-            });
-
-            selectionHandle2.setOnMouseDragged(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    TextAria textArea = getSkinnable();
-                    Text textNode = getTextNode();
-                    Point2D tp = textNode.localToScene(0, 0);
-                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle2.getWidth() / 2,
-                            e.getSceneY() - tp.getY() - pressY - 6);
-                    HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
-                    int pos = hit.getCharIndex();
-                    if (textArea.getAnchor() > textArea.getCaretPosition()) {
-                        // Swap caret and anchor
-                        textArea.selectRange(textArea.getCaretPosition(), textArea.getAnchor());
-                    }
-                    if (pos > 0) {
-                        if (pos <= textArea.getAnchor() + 1) {
-                            pos = Math.min(textArea.getAnchor() + 2, textArea.getLength());
-                        }
-                        int oldPos = textNode.getImpl_caretPosition();
-                        textNode.setImpl_caretPosition(pos);
-                        PathElement element = textNode.getImpl_caretShape()[0];
-                        if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
-                            hit.setCharIndex(pos - 1);
-                        }
-                        textNode.setImpl_caretPosition(oldPos);
-                        positionCaret(hit, true, false);
-                    }
-                    e.consume();
-                }
-            });
         }
     }
 
-    @Override
-    protected void layoutChildren(double contentX, double contentY, double contentWidth, double contentHeight) {
-        contentView.resizeRelocate(contentX, contentY, contentWidth, contentHeight);
+    override protected fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
+        contentView.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
     }
 
-    private void createPromptNode() {
+    private fun createPromptNode() {
         if (promptNode == null && usePromptText.get()) {
-            promptNode = new Text();
-            contentView.getChildren().add(0, promptNode);
-            promptNode.setManaged(false);
-            promptNode.getStyleClass().add("text");
-            promptNode.visibleProperty().bind(usePromptText);
-            promptNode.fontProperty().bind(getSkinnable().fontProperty());
-            promptNode.textProperty().bind(getSkinnable().promptTextProperty());
-            promptNode.fillProperty().bind(promptTextFill);
+            promptNode = Text()
+            contentView.getChildren().add(0, promptNode)
+            promptNode.setManaged(false)
+            promptNode.getStyleClass().add("text")
+            promptNode.visibleProperty().bind(usePromptText)
+            promptNode.fontProperty().bind(getSkinnable().fontProperty())
+            promptNode.textProperty().bind(getSkinnable().promptTextProperty())
+            promptNode.fillProperty().bind(promptTextFill)
         }
     }
 
-    private void addParagraphNode(int i, String string) {
-        final TextAria textArea = getSkinnable();
-        Text paragraphNode = new Text(string);
-        paragraphNode.setTextOrigin(VPos.TOP);
-        paragraphNode.setManaged(false);
-        paragraphNode.getStyleClass().add("text");
+    private fun addParagraphNode(i: Int, string: String) {
+        val textArea: TextAria = getSkinnable()
+        var paragraphNode: Text = Text(string)
+        paragraphNode.setTextOrigin(VPos.TOP)
+        paragraphNode.setManaged(false)
+        paragraphNode.getStyleClass().add("text")
         paragraphNode.boundsTypeProperty().addListener((observable, oldValue, newValue) -> {
-            invalidateMetrics();
-            updateFontMetrics();
-        });
-        paragraphNodes.getChildren().add(i, paragraphNode);
+            invalidateMetrics()
+            updateFontMetrics()
+        })
+        paragraphNodes.getChildren().add(i, paragraphNode)
 
-        paragraphNode.fontProperty().bind(textArea.fontProperty());
-        paragraphNode.fillProperty().bind(textFill);
-        paragraphNode.impl_selectionFillProperty().bind(highlightTextFill);
+        paragraphNode.fontProperty().bind(textArea.fontProperty())
+        paragraphNode.fillProperty().bind(textFill)
+        paragraphNode.impl_selectionFillProperty().bind(highlightTextFill)
     }
 
-    @Override
-    public void dispose() {
+    override fun dispose() {
         // TODO Unregister listeners on text editor, paragraph list
-        throw new UnsupportedOperationException();
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
-        Text firstParagraph = (Text) paragraphNodes.getChildren().get(0);
+    override fun computeBaselineOffset(topInset: Double, rightInset: Double, bottomInset: Double, leftInset: Double): Double {
+        var firstParagraph: Text = (Text) paragraphNodes.getChildren().get(0)
         return Utils.getAscent(getSkinnable().getFont(),firstParagraph.getBoundsType())
-                + contentView.snappedTopInset() + textArea.snappedTopInset();
+                + contentView.snappedTopInset() + textArea.snappedTopInset()
     }
 
-    @Override
-    public char getCharacter(int index) {
-        int n = paragraphNodes.getChildren().size();
+    override fun getCharacter(index:Int):Char {
+        var n: Int = paragraphNodes.getChildren().size()
 
-        int paragraphIndex = 0;
-        int offset = index;
+        var paragraphIndex: Int = 0
+        var offset: Int = index
 
-        String paragraph = null;
+        var paragraph: String = null
         while (paragraphIndex < n) {
-            Text paragraphNode = (Text)paragraphNodes.getChildren().get(paragraphIndex);
-            paragraph = paragraphNode.getText();
-            int count = paragraph.length() + 1;
+            var paragraphNode: Text = (Text)paragraphNodes.getChildren().get(paragraphIndex)
+            paragraph = paragraphNode.getText()
+            var count: Int = paragraph.length() + 1
 
             if (offset < count) {
-                break;
+                break
             }
 
-            offset -= count;
-            paragraphIndex++;
+            offset -= count
+            paragraphIndex++
         }
 
-        return offset == paragraph.length() ? '\n' : paragraph.charAt(offset);
+        return offset == paragraph.length() ? '\n' : paragraph.charAt(offset)
     }
 
-    @Override
-    public int getInsertionPoint(double x, double y) {
-        TextAria textArea = getSkinnable();
+    override fun getInsertionPoint(x:Double, y:Double):Int {
+        var textArea: TextAria = getSkinnable()
 
-        int n = paragraphNodes.getChildren().size();
-        int index = -1;
+        var n: Int = paragraphNodes.getChildren().size()
+        var index: Int = -1
 
         if (n > 0) {
             if (y < contentView.snappedTopInset()) {
                 // Select the character at x in the first row
-                Text paragraphNode = (Text)paragraphNodes.getChildren().get(0);
-                index = getNextInsertionPoint(paragraphNode, x, -1, VerticalDirection.DOWN);
+                var paragraphNode: Text = (Text)paragraphNodes.getChildren().get(0)
+                index = getNextInsertionPoint(paragraphNode, x, -1, VerticalDirection.DOWN)
             } else if (y > contentView.snappedTopInset() + contentView.getHeight()) {
                 // Select the character at x in the last row
-                int lastParagraphIndex = n - 1;
-                Text lastParagraphView = (Text)paragraphNodes.getChildren().get(lastParagraphIndex);
+                var lastParagraphIndex: Int = n - 1
+                var lastParagraphView: Text = (Text)paragraphNodes.getChildren().get(lastParagraphIndex)
 
                 index = getNextInsertionPoint(lastParagraphView, x, -1, VerticalDirection.UP)
-                        + (textArea.getLength() - lastParagraphView.getText().length());
+                        + (textArea.getLength() - lastParagraphView.getText().length())
             } else {
                 // Select the character at x in the row at y
-                int paragraphOffset = 0;
-                for (int i = 0; i < n; i++) {
-                    Text paragraphNode = (Text)paragraphNodes.getChildren().get(i);
+                var paragraphOffset: Int = 0
+                for (var i: Int = 0; i < n; i++) {
+                    var paragraphNode: Text = (Text)paragraphNodes.getChildren().get(i)
 
-                    Bounds bounds = paragraphNode.getBoundsInLocal();
-                    double paragraphViewY = paragraphNode.getLayoutY() + bounds.getMinY();
+                    var bounds: Bounds = paragraphNode.getBoundsInLocal()
+                    var paragraphViewY: Double = paragraphNode.getLayoutY() + bounds.getMinY()
                     if (y >= paragraphViewY
                             && y < paragraphViewY + paragraphNode.getBoundsInLocal().getHeight()) {
                         index = getInsertionPoint(paragraphNode,
                                 x - paragraphNode.getLayoutX(),
-                                y - paragraphNode.getLayoutY()) + paragraphOffset;
-                        break;
+                                y - paragraphNode.getLayoutY()) + paragraphOffset
+                        break
                     }
 
-                    paragraphOffset += paragraphNode.getText().length() + 1;
+                    paragraphOffset += paragraphNode.getText().length() + 1
                 }
             }
         }
 
-        return index;
+        return index
     }
 
-    public void positionCaret(HitInfo hit, boolean select, boolean extendSelection) {
-        int pos = Utils.getHitInsertionIndex(hit, getSkinnable().getText());
-        boolean isNewLine =
+    fun positionCaret(hit: HitInfo, select: Boolean, extendSelection: Boolean) {
+        var pos: Int = Utils.getHitInsertionIndex(hit, getSkinnable().getText())
+        var isNewLine: Boolean =
                 (pos > 0 &&
                         pos <= getSkinnable().getLength() &&
-                        getSkinnable().getText().codePointAt(pos-1) == 0x0a);
+                        getSkinnable().getText().codePointAt(pos-1) == 0x0a)
 
-        // special handling for a new line
+        // special handling for a line
         if (!hit.isLeading() && isNewLine) {
-            hit.setLeading(true);
-            pos -= 1;
+            hit.setLeading(true)
+            pos -= 1
         }
 
         if (select) {
             if (extendSelection) {
-                getSkinnable().extendSelection(pos);
+                getSkinnable().extendSelection(pos)
             } else {
-                getSkinnable().selectPositionCaret(pos);
+                getSkinnable().selectPositionCaret(pos)
             }
         } else {
-            getSkinnable().positionCaret(pos);
+            getSkinnable().positionCaret(pos)
         }
 
-        setForwardBias(hit.isLeading());
+        setForwardBias(hit.isLeading())
     }
 
-    private int getInsertionPoint(Text paragraphNode, double x, double y) {
-        HitInfo hitInfo = paragraphNode.impl_hitTestChar(new Point2D(x, y));
-        return Utils.getHitInsertionIndex(hitInfo, paragraphNode.getText());
+    private fun getInsertionPoint(paragraphNode: Text, x: Double, y: Double):Int {
+        var hitInfo: HitInfo = paragraphNode.impl_hitTestChar(Point2D(x, y))
+        return Utils.getHitInsertionIndex(hitInfo, paragraphNode.getText())
     }
 
-    public int getNextInsertionPoint(double x, int from, VerticalDirection scrollDirection) {
+    fun getNextInsertionPoint(x: Double, from: Int, scrollDirection: VerticalDirection):Int {
         // TODO
-        return 0;
+        return 0
     }
 
-    private int getNextInsertionPoint(Text paragraphNode, double x, int from,
-                                      VerticalDirection scrollDirection) {
+    private fun getNextInsertionPoint(paragraphNode: Text, x: Double, from: Int,
+                                      scrollDirection: VerticalDirection):Int {
         // TODO
-        return 0;
+        return 0
     }
 
-    @Override
-    public Rectangle2D getCharacterBounds(int index) {
-        TextAria textArea = getSkinnable();
+    override fun getCharacterBounds(index: Int): Rectangle2D {
+        var textArea: TextAria = getSkinnable()
 
-        int paragraphIndex = paragraphNodes.getChildren().size();
-        int paragraphOffset = textArea.getLength() + 1;
+        var paragraphIndex: Int = paragraphNodes.getChildren().size()
+        var paragraphOffset: Int = textArea.getLength() + 1
 
-        Text paragraphNode = null;
+        var paragraphNode: Text = null
         do {
-            paragraphNode = (Text)paragraphNodes.getChildren().get(--paragraphIndex);
-            paragraphOffset -= paragraphNode.getText().length() + 1;
-        } while (index < paragraphOffset);
+            paragraphNode = (Text)paragraphNodes.getChildren().get(--paragraphIndex)
+            paragraphOffset -= paragraphNode.getText().length() + 1
+        } while (index < paragraphOffset)
 
-        int characterIndex = index - paragraphOffset;
-        boolean terminator = false;
+        var characterIndex: Int = index - paragraphOffset
+        var terminator: Boolean = false
 
         if (characterIndex == paragraphNode.getText().length()) {
-            characterIndex--;
-            terminator = true;
+            characterIndex--
+            terminator = true
         }
 
-        characterBoundingPath.getElements().clear();
-        characterBoundingPath.getElements().addAll(paragraphNode.impl_getRangeShape(characterIndex, characterIndex + 1));
-        characterBoundingPath.setLayoutX(paragraphNode.getLayoutX());
-        characterBoundingPath.setLayoutY(paragraphNode.getLayoutY());
+        characterBoundingPath.getElements().clear()
+        characterBoundingPath.getElements().addAll(paragraphNode.impl_getRangeShape(characterIndex, characterIndex + 1))
+        characterBoundingPath.setLayoutX(paragraphNode.getLayoutX())
+        characterBoundingPath.setLayoutY(paragraphNode.getLayoutY())
 
-        Bounds bounds = characterBoundingPath.getBoundsInLocal();
+        var bounds: Bounds = characterBoundingPath.getBoundsInLocal()
 
-        double x = bounds.getMinX() + paragraphNode.getLayoutX() - textArea.getScrollLeft();
-        double y = bounds.getMinY() + paragraphNode.getLayoutY() - textArea.getScrollTop();
+        var x: Double = bounds.getMinX() + paragraphNode.getLayoutX() - textArea.getScrollLeft()
+        var y: Double = bounds.getMinY() + paragraphNode.getLayoutY() - textArea.getScrollTop()
 
         // Sometimes the bounds is empty, in which case we must ignore the width/height
-        double width = bounds.isEmpty() ? 0 : bounds.getWidth();
-        double height = bounds.isEmpty() ? 0 : bounds.getHeight();
+        var width: Double = bounds.isEmpty() ? 0 : bounds.getWidth()
+        var height: Double = bounds.isEmpty() ? 0 : bounds.getHeight()
 
         if (terminator) {
-            x += width;
-            width = 0;
+            x += width
+            width = 0
         }
 
-        return new Rectangle2D(x, y, width, height);
+        return Rectangle2D(x, y, width, height)
     }
 
-    @Override public void scrollCharacterToVisible(final int index) {
+    override fun scrollCharacterToVisible(final index: Int) {
         //TODO We queue a callback because when characters are added or
         // removed the bounds are not immediately updated; is this really
         // necessary?
 
         Platform.runLater(() -> {
             if (getSkinnable().getLength() == 0) {
-                return;
+                return
             }
-            Rectangle2D characterBounds = getCharacterBounds(index);
-        });
+            var characterBounds: Rectangle2D = getCharacterBounds(index)
+        })
     }
 
-    private void scrollCaretToVisible() {
-        TextAria textArea = getSkinnable();
-        Bounds bounds = caretPath.getLayoutBounds();
-        double x = bounds.getMinX() - textArea.getScrollLeft();
-        double y = bounds.getMinY() - textArea.getScrollTop();
-        double w = bounds.getWidth();
-        double h = bounds.getHeight();
+    private fun scrollCaretToVisible() {
+        var textArea: TextAria = getSkinnable()
+        var bounds: Bounds = caretPath.getLayoutBounds()
+        var x: Double = bounds.getMinX() - textArea.getScrollLeft()
+        var y: Double = bounds.getMinY() - textArea.getScrollTop()
+        var w: Double = bounds.getWidth()
+        var h: Double = bounds.getHeight()
 
         if (SHOW_HANDLES) {
             if (caretHandle.isVisible()) {
-                h += caretHandle.getHeight();
+                h += caretHandle.getHeight()
             } else if (selectionHandle1.isVisible() && selectionHandle2.isVisible()) {
-                x -= selectionHandle1.getWidth() / 2;
-                y -= selectionHandle1.getHeight();
-                w += selectionHandle1.getWidth() / 2 + selectionHandle2.getWidth() / 2;
-                h += selectionHandle1.getHeight() + selectionHandle2.getHeight();
+                x -= selectionHandle1.getWidth() / 2
+                y -= selectionHandle1.getHeight()
+                w += selectionHandle1.getWidth() / 2 + selectionHandle2.getWidth() / 2
+                h += selectionHandle1.getHeight() + selectionHandle2.getHeight()
             }
         }
     }
 
-    private void updatePrefViewportWidth() {
-        int columnCount = getSkinnable().getPrefColumnCount();
-        contentView.setPrefWidth(columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
-        contentView.setMinWidth(characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
+    private fun updatePrefViewportWidth() {
+        var columnCount: Int = getSkinnable().getPrefColumnCount()
+        contentView.setPrefWidth(columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset())
+        contentView.setMinWidth(characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset())
     }
 
-    private void updatePrefViewportHeight() {
-        int rowCount = getSkinnable().getPrefRowCount();
-        contentView.setPrefHeight(rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
-        contentView.setMinHeight(lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
+    private fun updatePrefViewportHeight() {
+        var rowCount: Int = getSkinnable().getPrefRowCount()
+        contentView.setPrefHeight(rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset())
+        contentView.setMinHeight(lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset())
     }
 
-    private void updateFontMetrics() {
-        Text firstParagraph = (Text)paragraphNodes.getChildren().get(0);
-        lineHeight = Utils.getLineHeight(getSkinnable().getFont(),firstParagraph.getBoundsType());
-        characterWidth = fontMetrics.get().computeStringWidth("W");
+    private fun updateFontMetrics() {
+        var firstParagraph: Text = (Text)paragraphNodes.getChildren().get(0)
+        lineHeight = Utils.getLineHeight(getSkinnable().getFont(),firstParagraph.getBoundsType())
+        characterWidth = fontMetrics.get().computeStringWidth("W")
     }
 
-    @Override
-    protected void updateHighlightFill() {
-        for (Node node : selectionHighlightGroup.getChildren()) {
-            Path selectionHighlightPath = (Path)node;
-            selectionHighlightPath.setFill(highlightFill.get());
+    override protected fun updateHighlightFill() {
+        for (var node: Node : selectionHighlightGroup.getChildren()) {
+            var selectionHighlightPath: Path = (Path)node
+            selectionHighlightPath.setFill(highlightFill.get())
         }
     }
 
-//     protected void handleMouseReleasedEvent(MouseEvent event) {
+//     protected fun handleMouseReleasedEvent(MouseEvent event) {
 // //        super.handleMouseReleasedEvent(event);
 
 //         // Stop the scroll selection timer
@@ -924,138 +909,138 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
 
     // Callbacks from Behavior class
 
-    private double getTextTranslateX() {
-        return contentView.snappedLeftInset();
+    private fun getTextTranslateX():Double {
+        return contentView.snappedLeftInset()
     }
 
-    private double getTextTranslateY() {
-        return contentView.snappedTopInset();
+    private fun getTextTranslateY():Double {
+        return contentView.snappedTopInset()
     }
 
-    private double getTextLeft() {
-        return 0;
+    private fun getTextLeft():Double {
+        return 0
     }
 
-    private Point2D translateCaretPosition(Point2D p) {
-        return p;
+    private fun translateCaretPosition(p: Point2D): Point2D {
+        return p
     }
 
-    private Text getTextNode() {
+    private fun getTextNode(): Text {
         if (USE_MULTIPLE_NODES) {
-            throw new IllegalArgumentException("Multiple node traversal is not yet implemented.");
+            throw IllegalArgumentException("Multiple node traversal is not yet implemented.")
         }
-        return (Text)paragraphNodes.getChildren().get(0);
+        return (Text)paragraphNodes.getChildren().get(0)
     }
 
-    public HitInfo getIndex(double x, double y) {
+    fun getIndex(x: Double, y: Double): HitInfo {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
-        Text textNode = getTextNode();
-        Point2D p = new Point2D(x - textNode.getLayoutX(), y - getTextTranslateY());
-        HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
-        int pos = hit.getCharIndex();
+        var textNode: Text = getTextNode()
+        var p: Point2D = Point2D(x - textNode.getLayoutX(), y - getTextTranslateY())
+        var hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
+        var pos: Int = hit.getCharIndex()
         if (pos > 0) {
-            int oldPos = textNode.getImpl_caretPosition();
-            textNode.setImpl_caretPosition(pos);
-            PathElement element = textNode.getImpl_caretShape()[0];
+            var oldPos: Int = textNode.getImpl_caretPosition()
+            textNode.setImpl_caretPosition(pos)
+            var element: PathElement = textNode.getImpl_caretShape()[0]
             if (element instanceof MoveTo && ((MoveTo)element).getY() > y - getTextTranslateY()) {
-                hit.setCharIndex(pos - 1);
+                hit.setCharIndex(pos - 1)
             }
-            textNode.setImpl_caretPosition(oldPos);
+            textNode.setImpl_caretPosition(oldPos)
         }
-        return hit;
-    };
+        return hit
+    }
 
     /**
      * Remembers horizontal position when traversing up / down.
      */
-    double targetCaretX = -1;
+    var targetCaretX: Double = -1
 
-    @Override public void nextCharacterVisually(boolean moveRight) {
+    override fun nextCharacterVisually(moveRight: Boolean) {
         if (isRTL()) {
             // Text node is mirrored.
-            moveRight = !moveRight;
+            moveRight = !moveRight
         }
 
-        Text textNode = getTextNode();
-        Bounds caretBounds = caretPath.getLayoutBounds();
+        var textNode: Text = getTextNode()
+        var caretBounds: Bounds = caretPath.getLayoutBounds()
         if (caretPath.getElements().size() == 4) {
             // The caret is split
             // TODO: Find a better way to get the primary caret position
             // instead of depending on the internal implementation.
             // See RT-25465.
-            caretBounds = new Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds();
+            caretBounds = Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds()
         }
-        double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();
-        double hitY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
-        HitInfo hit = textNode.impl_hitTestChar(new Point2D(hitX, hitY));
-        Path charShape = new Path(textNode.impl_getRangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
+        var hitX: Double = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX()
+        var hitY: Double = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2
+        var hit: HitInfo = textNode.impl_hitTestChar(Point2D(hitX, hitY))
+        var charShape: Path = Path(textNode.impl_getRangeShape(hit.getCharIndex(), hit.getCharIndex() + 1))
         if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
                 (!moveRight && charShape.getLayoutBounds().getMinX() < caretBounds.getMinX())) {
-            hit.setLeading(!hit.isLeading());
-            positionCaret(hit, false, false);
+            hit.setLeading(!hit.isLeading())
+            positionCaret(hit, false, false)
         } else {
             // We're at beginning or end of line. Try moving up / down.
-            int dot = textArea.getCaretPosition();
-            targetCaretX = moveRight ? 0 : Double.MAX_VALUE;
+            var dot: Int = textArea.getCaretPosition()
+            targetCaretX = moveRight ? 0 : Double.MAX_VALUE
             // TODO: Use Bidi sniffing instead of assuming right means forward here?
-            downLines(moveRight ? 1 : -1, false, false);
-            targetCaretX = -1;
+            downLines(moveRight ? 1 : -1, false, false)
+            targetCaretX = -1
             if (dot == textArea.getCaretPosition()) {
                 if (moveRight) {
-                    textArea.forward();
+                    textArea.forward()
                 } else {
-                    textArea.backward();
+                    textArea.backward()
                 }
             }
         }
     }
 
     /** A shared helper object, used only by downLines(). */
-    private static final Path tmpCaretPath = new Path();
+    private static val tmpCaretPath: Path = Path()
 
-    protected void downLines(int nLines, boolean select, boolean extendSelection) {
-        Text textNode = getTextNode();
-        Bounds caretBounds = caretPath.getLayoutBounds();
+    protected fun downLines(nLines: Int, select: Boolean, extendSelection: Boolean) {
+        var textNode: Text = getTextNode()
+        var caretBounds: Bounds = caretPath.getLayoutBounds()
 
         // The middle y coordinate of the the line we want to go to.
-        double targetLineMidY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2 + nLines * lineHeight;
+        var targetLineMidY: Double = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2 + nLines * lineHeight
         if (targetLineMidY < 0) {
-            targetLineMidY = 0;
+            targetLineMidY = 0
         }
 
         // The target x for the caret. This may have been set during a
         // previous call.
-        double x = (targetCaretX >= 0) ? targetCaretX : (caretBounds.getMaxX());
+        var x: Double = (targetCaretX >= 0) ? targetCaretX : (caretBounds.getMaxX())
 
         // Find a text position for the target x,y.
-        HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(new Point2D(x, targetLineMidY)));
-        int pos = hit.getCharIndex();
+        var hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(Point2D(x, targetLineMidY)))
+        var pos: Int = hit.getCharIndex()
 
-        // Save the old pos temporarily while testing the new one.
-        int oldPos = textNode.getImpl_caretPosition();
-        boolean oldBias = textNode.isImpl_caretBias();
-        textNode.setImpl_caretBias(hit.isLeading());
-        textNode.setImpl_caretPosition(pos);
-        tmpCaretPath.getElements().clear();
-        tmpCaretPath.getElements().addAll(textNode.getImpl_caretShape());
-        tmpCaretPath.setLayoutX(textNode.getLayoutX());
-        tmpCaretPath.setLayoutY(textNode.getLayoutY());
-        Bounds tmpCaretBounds = tmpCaretPath.getLayoutBounds();
+        // Save the old pos temporarily while testing the one.
+        var oldPos: Int = textNode.getImpl_caretPosition()
+        var oldBias: Boolean = textNode.isImpl_caretBias()
+        textNode.setImpl_caretBias(hit.isLeading())
+        textNode.setImpl_caretPosition(pos)
+        tmpCaretPath.getElements().clear()
+        tmpCaretPath.getElements().addAll(textNode.getImpl_caretShape())
+        tmpCaretPath.setLayoutX(textNode.getLayoutX())
+        tmpCaretPath.setLayoutY(textNode.getLayoutY())
+        var tmpCaretBounds: Bounds = tmpCaretPath.getLayoutBounds()
         // The y for the middle of the row we found.
-        double foundLineMidY = (tmpCaretBounds.getMinY() + tmpCaretBounds.getMaxY()) / 2;
-        textNode.setImpl_caretBias(oldBias);
-        textNode.setImpl_caretPosition(oldPos);
+        var foundLineMidY: Double = (tmpCaretBounds.getMinY() + tmpCaretBounds.getMaxY()) / 2
+        textNode.setImpl_caretBias(oldBias)
+        textNode.setImpl_caretPosition(oldPos)
 
         if (pos > 0) {
             if (nLines > 0 && foundLineMidY > targetLineMidY) {
                 // We went too far and ended up after a newline.
-                hit.setCharIndex(pos - 1);
+                hit.setCharIndex(pos - 1)
             }
 
             if (pos >= textArea.getLength() && getCharacter(pos - 1) == '\n') {
                 // Special case for newline at end of text.
-                hit.setLeading(true);
+                hit.setLeading(true)
             }
         }
 
@@ -1065,148 +1050,148 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
                 (nLines > 0 && foundLineMidY > caretBounds.getMaxY()) ||
                 (nLines < 0 && foundLineMidY < caretBounds.getMinY())) {
 
-            positionCaret(hit, select, extendSelection);
-            targetCaretX = x;
+            positionCaret(hit, select, extendSelection)
+            targetCaretX = x
         }
     }
 
-    public void previousLine(boolean select) {
-        downLines(-1, select, false);
+    fun previousLine(select: Boolean) {
+        downLines(-1, select, false)
     }
 
-    public void nextLine(boolean select) {
-        downLines(1, select, false);
+    fun nextLine(select: Boolean) {
+        downLines(1, select, false)
     }
 
-    public void lineStart(boolean select, boolean extendSelection) {
-        targetCaretX = 0;
-        downLines(0, select, extendSelection);
-        targetCaretX = -1;
+    fun lineStart(select: Boolean, extendSelection: Boolean) {
+        targetCaretX = 0
+        downLines(0, select, extendSelection)
+        targetCaretX = -1
     }
 
-    public void lineEnd(boolean select, boolean extendSelection) {
-        targetCaretX = Double.MAX_VALUE;
-        downLines(0, select, extendSelection);
-        targetCaretX = -1;
+    fun lineEnd(select: Boolean, extendSelection: Boolean) {
+        targetCaretX = Double.MAX_VALUE
+        downLines(0, select, extendSelection)
+        targetCaretX = -1
     }
 
 
-    public void paragraphStart(boolean previousIfAtStart, boolean select) {
-        TextAria textArea = getSkinnable();
-        String text = textArea.textProperty().getValueSafe();
-        int pos = textArea.getCaretPosition();
+    fun paragraphStart(previousIfAtStart: Boolean, select: Boolean) {
+        var textArea: TextAria = getSkinnable()
+        var text: String = textArea.textProperty().getValueSafe()
+        var pos: Int = textArea.getCaretPosition()
 
         if (pos > 0) {
             if (previousIfAtStart && text.codePointAt(pos-1) == 0x0a) {
                 // We are at the beginning of a paragraph.
                 // Back up to the previous paragraph.
-                pos--;
+                pos--
             }
             // Back up to the beginning of this paragraph
             while (pos > 0 && text.codePointAt(pos-1) != 0x0a) {
-                pos--;
+                pos--
             }
             if (select) {
-                textArea.selectPositionCaret(pos);
+                textArea.selectPositionCaret(pos)
             } else {
-                textArea.positionCaret(pos);
+                textArea.positionCaret(pos)
             }
         }
     }
 
-    public void paragraphEnd(boolean goPastInitialNewline, boolean goPastTrailingNewline, boolean select) {
-        TextAria textArea = getSkinnable();
-        String text = textArea.textProperty().getValueSafe();
-        int pos = textArea.getCaretPosition();
-        int len = text.length();
-        boolean wentPastInitialNewline = false;
+    fun paragraphEnd(goPastInitialNewline: Boolean, goPastTrailingNewline: Boolean, select: Boolean) {
+        var textArea: TextAria = getSkinnable()
+        var text: String = textArea.textProperty().getValueSafe()
+        var pos: Int = textArea.getCaretPosition()
+        var len: Int = text.length()
+        var wentPastInitialNewline: Boolean = false
 
         if (pos < len) {
             if (goPastInitialNewline && text.codePointAt(pos) == 0x0a) {
                 // We are at the end of a paragraph, start by moving to the
                 // next paragraph.
-                pos++;
-                wentPastInitialNewline = true;
+                pos++
+                wentPastInitialNewline = true
             }
             if (!(goPastTrailingNewline && wentPastInitialNewline)) {
                 // Go to the end of this paragraph
                 while (pos < len && text.codePointAt(pos) != 0x0a) {
-                    pos++;
+                    pos++
                 }
                 if (goPastTrailingNewline && pos < len) {
                     // We are at the end of a paragraph, finish by moving to
                     // the beginning of the next paragraph (Windows behavior).
-                    pos++;
+                    pos++
                 }
             }
             if (select) {
-                textArea.selectPositionCaret(pos);
+                textArea.selectPositionCaret(pos)
             } else {
-                textArea.positionCaret(pos);
+                textArea.positionCaret(pos)
             }
         }
     }
 
-    private void updateTextNodeCaretPos(int pos) {
-        Text textNode = getTextNode();
+    private fun updateTextNodeCaretPos(pos: Int) {
+        var textNode: Text = getTextNode()
         if (isForwardBias()) {
-            textNode.setImpl_caretPosition(pos);
+            textNode.setImpl_caretPosition(pos)
         } else {
-            textNode.setImpl_caretPosition(pos - 1);
+            textNode.setImpl_caretPosition(pos - 1)
         }
-        textNode.impl_caretBiasProperty().set(isForwardBias());
+        textNode.impl_caretBiasProperty().set(isForwardBias())
     }
 
-    @Override protected PathElement[] getUnderlineShape(int start, int end) {
-        int pStart = 0;
-        for (Node node : paragraphNodes.getChildren()) {
-            Text p = (Text)node;
-            int pEnd = pStart + p.textProperty().getValueSafe().length();
+    override protected fun getUnderlineShape(start: Int, end: Int):Array<PathElement> {
+        var pStart: Int = 0
+        for (node: Node in paragraphNodes.getChildren()) {
+            var p: Text = (Text)node
+            var pEnd: Int = pStart + p.textProperty().getValueSafe().length()
             if (pEnd >= start) {
-                return p.impl_getUnderlineShape(start - pStart, end - pStart);
+                return p.impl_getUnderlineShape(start - pStart, end - pStart)
             }
-            pStart = pEnd + 1;
+            pStart = pEnd + 1
         }
-        return null;
+        return null
     }
 
-    @Override protected PathElement[] getRangeShape(int start, int end) {
-        int pStart = 0;
-        for (Node node : paragraphNodes.getChildren()) {
-            Text p = (Text)node;
-            int pEnd = pStart + p.textProperty().getValueSafe().length();
+    override protected fun getRangeShape(start: Int, end: Int):Array<PathElement> {
+        var pStart: Int = 0
+        for (node: Node in paragraphNodes.getChildren()) {
+            var p: Text = (Text)node
+            var pEnd: Int = pStart + p.textProperty().getValueSafe().length()
             if (pEnd >= start) {
-                return p.impl_getRangeShape(start - pStart, end - pStart);
+                return p.impl_getRangeShape(start - pStart, end - pStart)
             }
-            pStart = pEnd + 1;
+            pStart = pEnd + 1
         }
-        return null;
+        return null
     }
 
-    @Override protected void addHighlight(List<? extends Node> nodes, int start) {
-        int pStart = 0;
-        Text paragraphNode = null;
-        for (Node node : paragraphNodes.getChildren()) {
-            Text p = (Text)node;
-            int pEnd = pStart + p.textProperty().getValueSafe().length();
+    override protected fun addHighlight(List<? : Node> nodes, start: Int) {
+        var pStart: Int = 0
+        var paragraphNode: Text = null
+        for (node: Node in paragraphNodes.getChildren()) {
+            var p: Text = (Text)node
+            var pEnd: Int = pStart + p.textProperty().getValueSafe().length()
             if (pEnd >= start) {
-                paragraphNode = p;
-                break;
+                paragraphNode = p
+                break
             }
-            pStart = pEnd + 1;
+            pStart = pEnd + 1
         }
 
         if (paragraphNode != null) {
-            for (Node node : nodes) {
-                node.setLayoutX(paragraphNode.getLayoutX());
-                node.setLayoutY(paragraphNode.getLayoutY());
+            for (node: Node in nodes) {
+                node.setLayoutX(paragraphNode.getLayoutX())
+                node.setLayoutY(paragraphNode.getLayoutY())
             }
         }
-        contentView.getChildren().addAll(nodes);
+        contentView.getChildren().addAll(nodes)
     }
 
-    @Override protected void removeHighlight(List<? extends Node> nodes) {
-        contentView.getChildren().removeAll(nodes);
+    override protected fun removeHighlight(List<? : Node> nodes) {
+        contentView.getChildren().removeAll(nodes)
     }
 
     /**
@@ -1214,12 +1199,12 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
      * Simply calls into TextInputControl.deletePrevious/NextChar and responds appropriately
      * based on the return value.
      */
-    public void deleteChar(boolean previous) {
+    fun deleteChar(previous: Boolean) {
 //        final double textMaxXOld = textNode.getBoundsInParent().getMaxX();
 //        final double caretMaxXOld = caretPath.getLayoutBounds().getMaxX() + textTranslateX.get();
-        final boolean shouldBeep = previous ?
+        val shouldBeep: Boolean = previous ?
                 !getSkinnable().deletePreviousChar() :
-                !getSkinnable().deleteNextChar();
+                !getSkinnable().deleteNextChar()
 
         if (shouldBeep) {
 //            beep();
@@ -1228,31 +1213,30 @@ public class TextAriaSkin extends TextInputControlSkin<TextAria, TextAriaBehavio
         }
     }
 
-    @Override public Point2D getMenuPosition() {
-        contentView.layoutChildren();
-        Point2D p = super.getMenuPosition();
+    override fun getMenuPosition(): Point2D {
+        contentView.layoutChildren()
+        var p: Point2D = super.getMenuPosition()
         if (p != null) {
-            p = new Point2D(Math.max(0, p.getX() - contentView.snappedLeftInset() - getSkinnable().getScrollLeft()),
-                    Math.max(0, p.getY() - contentView.snappedTopInset() - getSkinnable().getScrollTop()));
+            p = Point2D(Math.max(0, p.getX() - contentView.snappedLeftInset() - getSkinnable().getScrollLeft()),
+                    Math.max(0, p.getY() - contentView.snappedTopInset() - getSkinnable().getScrollTop()))
         }
-        return p;
+        return p
     }
 
-    public Bounds getCaretBounds() {
-        return getSkinnable().sceneToLocal(caretPath.localToScene(caretPath.getBoundsInLocal()));
+    fun getCaretBounds(): Bounds {
+        return getSkinnable().sceneToLocal(caretPath.localToScene(caretPath.getBoundsInLocal()))
     }
 
-    @Override
-    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+    override protected fun queryAccessibleAttribute(attribute: AccessibleAttribute, Object... parameters): Object {
         switch (attribute) {
             case LINE_FOR_OFFSET:
             case LINE_START:
             case LINE_END:
             case BOUNDS_FOR_RANGE:
             case OFFSET_AT_POINT:
-                Text text = getTextNode();
-                return text.queryAccessibleAttribute(attribute, parameters);
-            default: return super.queryAccessibleAttribute(attribute, parameters);
+                var text: Text = getTextNode()
+                return text.queryAccessibleAttribute(attribute, parameters)
+            default: return super.queryAccessibleAttribute(attribute, parameters)
         }
     }
 }
