@@ -274,6 +274,7 @@ class Kotban : Application() {
         colContainer.onContextMenuRequested = EventHandler {
             contextMenu.show(colContainer, it.screenX, it.screenY)
         }
+        DragResizerX(colContainer).makeResizable()
     }
 
     private fun contextMenuFor(column:Column, dirFile:File):ContextMenu = ContextMenu(
