@@ -23,7 +23,7 @@ data class Board(val name:String, val columns:List<Column>) {
                 Column(subdir.name, subdir, (subdir.listFiles() ?: arrayOf()).filter {file: File ->
                     //println("file in $subdir: $file")
                     //filter out non-files, unreadables, nonexistent, >10MB, without the right extensions
-                    isValidFile(file)
+                    file.isValidFile()
                 }.map { file ->
                     Note(file = file, title = file.name, contents = file.readText())
                 }.sortedBy { it.title })
@@ -33,3 +33,7 @@ data class Board(val name:String, val columns:List<Column>) {
         }
     }
 }
+
+data class Column(val name:String, val folder: File, val notes:List<Note>)
+
+data class Note(val file: File, val title:String, val contents:String)

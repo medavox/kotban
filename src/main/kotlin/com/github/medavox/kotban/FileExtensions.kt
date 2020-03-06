@@ -1,27 +1,98 @@
 package com.github.medavox.kotban
 
-import java.awt.Desktop
 import java.io.File
+import java.awt.Desktop
 import java.io.IOException
 import java.net.URI
 
+/**
+ * The margin around the control that a user can click in to start resizing
+ * the region.
+ */
+const val RESIZE_MARGIN = 10
+
+val PLAIN_TEXT_FILE_EXTENSIONS = arrayOf("txt", "md", "cfg", "ini", "config", "textile", "rst", "asc")
+
+fun File.isValidFile():Boolean {
+    return isFile && canRead() && exists() &&
+            length() < (10240 * 1024) &&
+            extension in PLAIN_TEXT_FILE_EXTENSIONS
+}
+
+fun File.openInDefaultTextEditor() {
+    if(!isValidFile()) {
+        System.err.println("invalid file for text editing: $this")
+        return
+    }
+    if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+        val cmd = "rundll32 url.dll,FileProtocolHandler " + canonicalPath
+        Runtime.getRuntime().exec(cmd)
+    } else {
+        //Desktop.getDesktop().edit(file)
+        DesktopApi.edit(this)
+    }
+}
+
+fun File.recurse(
+            operate:(File) -> Unit,
+            filter:String="",
+            acceptFile:(File)->Boolean={true}
+) {
+    require(this.isDirectory && this.exists()) {
+        "supplied argument must be a directory which exists" }
+    val files:Array<File>? = this.listFiles()
+    if(files == null) {
+        System.err.println("unable to query listings in directory \'$this\'")
+        return
+    }
+    for(f in files) {
+        if(f.isDirectory) {
+            f.recurse(operate, filter, acceptFile)
+        }
+        else {
+            if(f.name.contains(filter) && acceptFile(f)) {
+                operate(f)
+            }
+        }
+    }
+}
+
+fun File.recursivelyDelete() {
+    require(this.isDirectory && this.exists()) {
+        "supplied argument must be a directory which exists" }
+    val files:Array<File>? = this.listFiles()
+    if(files == null) {
+        System.err.println("unable to query listings in directory \'$this\'")
+        return
+    }
+    for(f in files) {
+        if(f.isDirectory) {
+            f.recursivelyDelete()
+            f.delete()
+        } else {
+            f.delete()
+        }
+    }
+    this.delete()
+}
+
 /**Based on code from https://stackoverflow.com/a/18004334*/
-object DesktopApi {
+private object DesktopApi {
 
     private val e = System.err
 
-    fun browse(uri:URI) : Boolean = if (openSystemSpecific(uri.toString())) true else browseDESKTOP(uri)
+    fun browse(uri: URI) : Boolean = if (openSystemSpecific(uri.toString())) true else browseDESKTOP(uri)
 
-    fun open(file:File) : Boolean = if (openSystemSpecific(file.path)) true else openDESKTOP(file)
+    fun open(file: File) : Boolean = if (openSystemSpecific(file.path)) true else openDESKTOP(file)
 
     /**you can try something like
     `runCommand("gimp", "%s", file.getPath())`
     based on user preferences.*/
-    fun edit(file:File) : Boolean = if (openSystemSpecific(file.getPath())) true else editDESKTOP(file)
+    fun edit(file: File) : Boolean = if (openSystemSpecific(file.getPath())) true else editDESKTOP(file)
 
 
     private fun openSystemSpecific(what:String) : Boolean {
-        val os:EnumOS = getOs()
+        val os:EnumOS = EnumOS.getOs()
         if (os.isLinux()) {
             if (runCommand("kde-open", "%s", what)) return true
             if (runCommand("gnome-open", "%s", what)) return true
@@ -39,7 +110,7 @@ object DesktopApi {
     }
 
 
-    private fun browseDESKTOP(uri:URI) : Boolean {
+    private fun browseDESKTOP(uri: URI) : Boolean {
         println("Trying to use Desktop.getDesktop().browse() with $uri")
         try {
             if (!Desktop.isDesktopSupported()) {
@@ -47,7 +118,8 @@ object DesktopApi {
                 return false
             }
 
-            if (!Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            if (!Desktop.getDesktop()
+                    .isSupported(Desktop.Action.BROWSE)) {
                 e.println("BROWSE is not supported.")
                 return false
             }
@@ -62,7 +134,7 @@ object DesktopApi {
     }
 
 
-    private fun openDESKTOP(file:File) : Boolean {
+    private fun openDESKTOP(file: File) : Boolean {
         println("Trying to use Desktop.getDesktop().open() with $file")
         try {
             if (!Desktop.isDesktopSupported()) {
@@ -70,7 +142,8 @@ object DesktopApi {
                 return false
             }
 
-            if (!Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+            if (!Desktop.getDesktop()
+                    .isSupported(Desktop.Action.OPEN)) {
                 e.println("OPEN is not supported.")
                 return false
             }
@@ -85,7 +158,7 @@ object DesktopApi {
     }
 
 
-    private fun editDESKTOP(file:File) : Boolean {
+    private fun editDESKTOP(file: File) : Boolean {
         println("Trying to use Desktop.getDesktop().edit() with $file")
         try {
             if (!Desktop.isDesktopSupported()) {
@@ -127,7 +200,7 @@ object DesktopApi {
                 e.println("Process is running.")
                 return true
             }
-        } catch (e:IOException) {
+        } catch (e: IOException) {
             logErr("Error running command.", e)
             return false
         }
@@ -157,18 +230,20 @@ object DesktopApi {
     enum class EnumOS {
         LINUX, MACOS, SOLARIS, UNKNOWN, WINDOWS;
 
-        fun isLinux():Boolean = (this == LINUX || this == SOLARIS)
-    }
+        fun isLinux(): Boolean = (this == LINUX || this == SOLARIS)
 
-    private fun getOs():EnumOS = with(System.getProperty("os.name").toLowerCase()) {
-        return when {
-            contains("win") -> EnumOS.WINDOWS
-            contains("mac") -> EnumOS.MACOS
-            contains("solaris") -> EnumOS.SOLARIS
-            contains("sunos") -> EnumOS.SOLARIS
-            contains("linux") -> EnumOS.LINUX
-            contains("unix") -> EnumOS.LINUX
-            else -> EnumOS.UNKNOWN
+        companion object {
+            fun getOs(): EnumOS = with(System.getProperty("os.name").toLowerCase()) {
+                return when {
+                    contains("win") -> WINDOWS
+                    contains("mac") -> MACOS
+                    contains("solaris") -> SOLARIS
+                    contains("sunos") -> SOLARIS
+                    contains("linux") -> LINUX
+                    contains("unix") -> LINUX
+                    else -> UNKNOWN
+                }
+            }
         }
     }
 }

@@ -160,7 +160,7 @@ class Kotban : Application() {
         }
         contextMenu = ContextMenu(
             MenuItem("Open note in editor").apply{setOnAction{
-                openInDefaultTextEditor(note.file)
+                note.file.openInDefaultTextEditor()
             }},
             MenuItem("Rename note").apply{setOnAction{
                 promptForFileName(false, note.file.parentFile,
