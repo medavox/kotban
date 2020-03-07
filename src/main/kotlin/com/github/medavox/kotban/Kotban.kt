@@ -146,55 +146,18 @@ class Kotban : Application() {
         //contentContainer.content = layoutColumnContents(board.columns)
     }
 
-    /**Generates the UI component hierarchy for a single Note.*/
-    private fun uiOf(note:Note, dirFile:File): TitledPane = TitledPane().apply {
-        //text = if(note.title.length < 30) note.title else note.title.substring(0, 30)+"…"//truncate long filenames
-        text = note.title
-        isExpanded = false
-        isAnimated = false
-        content = TextAria(note.contents).also { textArea ->
-            textArea.isEditable=false
-            textArea.isWrapText = true
-            textArea.prefHeightProperty().bind(textArea.doubleBinding)
-            textArea.font = Font.font("monospace")
-        }
-        contextMenu = ContextMenu(
-            MenuItem("Open note in editor").apply{setOnAction{
-                note.file.openInDefaultTextEditor()
-            }},
-            MenuItem("Rename note").apply{setOnAction{
-                promptForFileName(false, note.file.parentFile,
-                    "rename note file \n\'${note.file.name}\'", note.file.name
-                )?.let {
-                    note.file.renameTo(it)
-                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
-                }
-            }},
-            MenuItem("Delete note").apply{setOnAction{
-                val confirmation = Alert(CONFIRMATION).apply {
-                    headerText = "delete this note \'${note.title}\'?"
-                    //dialogPane.
-                }.showAndWait()
-                if(confirmation.isPresent && confirmation.get() == ButtonType.OK) {
-                    note.file.delete()
-                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
-                }
-            }}
-        )
-
-        onDragDetected = EventHandler {event ->
-            //println("drag detected:$it")
-            val dragBoard = startDragAndDrop(TransferMode.MOVE)
-            dragBoard.dragView = (event.source as Node).snapshot(null, null)
-            println("dragBoard:$dragBoard")
-            //put a file on the dragboard
-            val content = ClipboardContent()
-            content.putFiles(listOf(note.file))
-            dragBoard.setContent(content)
-
-            event.consume()
-        }
-        allNoteNodes.add(this)
+    private fun layoutColumnContents(columns:List<Column>, dirFile:File):HBox {
+        val uiColumns = HBox()
+        allNoteNodes = mutableSetOf()//reset collection of all nodes, in case there was one before
+        //In general you should reduce the number of changes in scene-graph (e.g adding/removing of children)
+        // because these can be expensive. It is generally faster to add many children in one step:
+        val columnUis = columns.map {uiOf(it, dirFile) }
+        uiColumns.children.addAll(columnUis)
+        //than by using a for-loop:
+        /*for(column in columns) {
+            uiColumns.children.add(uiOf(column, dirFile))
+        }*/
+        return uiColumns
     }
 
     private fun uiOf(column:Column, dirFile:File):Node = VBox().also { colContainer ->
@@ -326,6 +289,57 @@ class Kotban : Application() {
         DragResizerX(colContainer).makeResizable()
     }
 
+    /**Generates the UI component hierarchy for a single Note.*/
+    private fun uiOf(note:Note, dirFile:File): TitledPane = TitledPane().apply {
+        //text = if(note.title.length < 30) note.title else note.title.substring(0, 30)+"…"//truncate long filenames
+        text = note.title
+        isExpanded = false
+        isAnimated = false
+        content = TextAria(note.contents).also { textArea ->
+            textArea.isEditable=false
+            textArea.isWrapText = true
+            textArea.prefHeightProperty().bind(textArea.doubleBinding)
+            textArea.font = Font.font("monospace")
+        }
+        contextMenu = ContextMenu(
+            MenuItem("Open note in editor").apply{setOnAction{
+                note.file.openInDefaultTextEditor()
+            }},
+            MenuItem("Rename note").apply{setOnAction{
+                promptForFileName(false, note.file.parentFile,
+                    "rename note file \n\'${note.file.name}\'", note.file.name
+                )?.let {
+                    note.file.renameTo(it)
+                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
+                }
+            }},
+            MenuItem("Delete note").apply{setOnAction{
+                val confirmation = Alert(CONFIRMATION).apply {
+                    headerText = "delete this note \'${note.title}\'?"
+                    //dialogPane.
+                }.showAndWait()
+                if(confirmation.isPresent && confirmation.get() == ButtonType.OK) {
+                    note.file.delete()
+                    contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
+                }
+            }}
+        )
+
+        onDragDetected = EventHandler {event ->
+            //println("drag detected:$it")
+            val dragBoard = startDragAndDrop(TransferMode.MOVE)
+            dragBoard.dragView = (event.source as Node).snapshot(null, null)
+            println("dragBoard:$dragBoard")
+            //put a file on the dragboard
+            val content = ClipboardContent()
+            content.putFiles(listOf(note.file))
+            dragBoard.setContent(content)
+
+            event.consume()
+        }
+        allNoteNodes.add(this)
+    }
+
     private fun contextMenuFor(column:Column, dirFile:File):ContextMenu = ContextMenu(
         MenuItem("Rename Column").apply{setOnAction{
             promptForFileName(true, dirFile,
@@ -364,20 +378,6 @@ class Kotban : Application() {
             }
         }}
     )
-
-    private fun layoutColumnContents(columns:List<Column>, dirFile:File):HBox {
-        val uiColumns = HBox()
-        allNoteNodes = mutableSetOf()//reset collection of all nodes, in case there was one before
-        //In general you should reduce the number of changes in scene-graph (e.g adding/removing of children)
-        // because these can be expensive. It is generally faster to add many children in one step:
-        val columnUis = columns.map {uiOf(it, dirFile) }
-        uiColumns.children.addAll(columnUis)
-        //than by using a for-loop:
-        /*for(column in columns) {
-            uiColumns.children.add(uiOf(column, dirFile))
-        }*/
-        return uiColumns
-    }
 
     private fun promptForFileName(trueDirFalseFile:Boolean,
                                   parent:File,
