@@ -32,7 +32,6 @@ import java.io.File
 // togglable MarkDown preview for .md files
 // allow dragging to a specific placement in the column?
 //   goes against our "ordering is alphabetical only" approach
-// (fix) prevent a drag-move from overwriting an existing file with the same name
 // button: Expand/collapse all notes in a single column
 // a way to minimise a column (hide it like notes can be hidden)
 /**terminology:
@@ -256,9 +255,23 @@ class Kotban : Application() {
                     var success = false
                     if (db.hasFiles()) {
                         println("files: ${db.files}")
-                        db.files[0].renameTo(File(column.folder, db.files[0].name))
+                        val moveDest = File(column.folder, db.files[0].name)
+                        if(!moveDest.exists()) {
+                            db.files[0].renameTo(moveDest)
+                            contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
+                        }else {//file already exists with that name; show dialog confirming overwrite
+                            val confirmation = Alert(CONFIRMATION).apply {
+                                headerText = "File already exists with that name.\nOverwrite existing note" +
+                                    if(chosenDirFile == null) "" else {
+                                        " \'${moveDest.relativeTo(chosenDirFile!!).toString()}\'"
+                                    }+"?"
+                            }.showAndWait()
+                            if(confirmation.isPresent && confirmation.get() == ButtonType.OK) {
+                                db.files[0].renameTo(moveDest)
+                                contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
+                            }
+                        }
                         success = true
-                        contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
                     }
                     /* let the source know whether the string was successfully
                          * transferred and used */
