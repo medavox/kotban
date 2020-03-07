@@ -1,0 +1,1 @@
+filter by tag - supported through a custom 'tags' line in the note's text

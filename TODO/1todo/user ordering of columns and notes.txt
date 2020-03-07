@@ -1,0 +1,12 @@
+allow user ordering of notes and columns
+======================================
+
+rationale: 
+
+What if I want to compare two notes by having them adjacent to one another?
+What if I want to rearrange the columns temporarily, for my current workflow?
+
+I've gone back and forth on this a few times,
+and for a long time the decision was to NOT allow user-ordering.
+
+But for me, the above rationales trump the complexity that omitting this would save.

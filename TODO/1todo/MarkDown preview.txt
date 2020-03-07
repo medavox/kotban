@@ -1,0 +1,5 @@
+togglable MarkDown preview for .md files
+
+requires/will require the use of a library --
+so far, com.atlassian.commonmark has been chosen;
+but I've not used it yet, so it might turn out to be unsuitable

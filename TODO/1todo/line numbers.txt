@@ -1,0 +1,6 @@
+line numbers in note contents
+============================
+
+Not easily doable, as TextArea didn't support this.
+Probably need to write bespoke behaviour from scratch,
+using https://github.com/FXMisc/RichTextFX as a guide

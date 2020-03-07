@@ -1,0 +1,1 @@
+button: Expand/collapse all notes in a single column

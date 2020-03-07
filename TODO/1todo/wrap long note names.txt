@@ -1,0 +1,3 @@
+wrap long note names
+
+seems to be already sort-of provided: long TitledPane titles are truncated

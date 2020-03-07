@@ -21,16 +21,6 @@ import javafx.stage.Stage
 import javafx.util.Duration
 import java.io.File
 
-//todo:
-// line numbers in note contents
-// button: maximise a single note
-// filter by tag - supported through a custom 'tags' line in the note's text
-// wrap long column names
-// wrap long note names
-// togglable MarkDown preview for .md files
-// allow user ordering of notes (but not columns)
-// button: Expand/collapse all notes in a single column
-// a way to minimise a column (hide it like notes can be hidden)
 /**terminology:
  * board: the whole thing. A folder with subfolders that each contain 0 or more text files
  * column: contains notes/tasks. represented on-disk by a subfolder of the board
