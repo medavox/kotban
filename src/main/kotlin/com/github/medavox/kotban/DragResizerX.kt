@@ -29,21 +29,20 @@ class DragResizerX(private val region:Region) {
 
 			dragging = true
 
-			// make sure that the minimum height is set to the current height once,
-			// setting a min height that is smaller than the current height will
+			// make sure that the minimum width is set to the current height once,
+			// setting a min width that is smaller than the current width will
 			// have no effect
 			if (!initMinWidth) {
-				region.minWidth = region.width
+				region.prefWidth = region.width
 				initMinWidth = true
 			}
-
 			x = event.x
 		}
 		region.setOnMouseDragged { event ->
 			if (!dragging) { Unit }
 
 			if (draggableZoneX) {
-				region.minWidth = region.minWidth + (event.x - x)
+				region.prefWidth +=  (event.x - x)
 				x = event.x
 			}
 		}
