@@ -24,13 +24,11 @@ import java.io.File
 //todo:
 // line numbers in note contents
 // button: maximise a single note
-// tags - supported through a custom line in the note's text
-// filter by tag
+// filter by tag - supported through a custom 'tags' line in the note's text
 // wrap long column names
 // wrap long note names
 // togglable MarkDown preview for .md files
-// allow dragging to a specific placement in the column?
-//   goes against our "ordering is alphabetical only" approach
+// allow user ordering of notes (but not columns)
 // button: Expand/collapse all notes in a single column
 // a way to minimise a column (hide it like notes can be hidden)
 /**terminology:
@@ -49,14 +47,13 @@ class Kotban : Application() {
 
     private val COLUMN_WIDTH = 300.0
     private val EDGE_DRAG_SCROLLING_MARGIN = 80.0
-    //Higher speed value = slower scroll.
-    private val SCROLLING_SPEED = 60
+
+    private val SCROLLING_SPEED = 60//Higher value = slower scroll
 
     /*Instead of making entries editable (and effectively having to write our own text editor),
-    * make each entry, upon being clicked, open itself in the user's choice of editor.
-    * That allows us to focus on prettifying the Markdown */
+    * each entry can be opened in the user's choice of editor.
+    * This allows us to focus on prettifying the Markdown */
     override fun start(primaryStage:Stage) {
-
         val root = VBox()
         contentContainer = ScrollPane().apply {//horizontal scrollpane for columns
             prefViewportWidthProperty().bind(root.widthProperty())
