@@ -228,18 +228,18 @@ class Kotban : Application() {
                 subtract(columnButtonBar.heightProperty()).
                 subtract(mainButtonBar.heightProperty())
             )
-            notesScrollPane.content = VBox().apply {
+            notesScrollPane.content = VBox().also {notesContainer ->
                 if(column.notes.isEmpty() || contentContainer.height >= notesScrollPane.height) {
                     //expand empty columns to fill the vertical space,
                     // so notes can be dragged into them
-                    minHeightProperty().bind(contentContainer.heightProperty().
+                    notesContainer.minHeightProperty().bind(contentContainer.heightProperty().
                         subtract(columnButtonBar.heightProperty()).
                         subtract(mainButtonBar.heightProperty())
                     )
                 }
                 notesScrollPane.vbarPolicy = ScrollPane.ScrollBarPolicy.ALWAYS
                 notesScrollPane.hbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
-                onDragOver = EventHandler { event ->
+                notesContainer.onDragOver = EventHandler { event ->
                     /* accept only if it's not dragged from the same node,
                          * and if it has a File as data */
                     if (event.gestureSource !== this && event.dragboard.hasFiles()) {
@@ -250,7 +250,7 @@ class Kotban : Application() {
                     //event.consume()
                 }
 
-                onDragDropped = EventHandler { event ->
+                notesContainer.onDragDropped = EventHandler { event ->
                     println("$this: onDragDropped: $event")
                     val db = event.dragboard
                     var success = false
@@ -283,7 +283,7 @@ class Kotban : Application() {
                     event.consume()
                 }
                 for (note in column.notes) {
-                    children.add(uiOf(note, dirFile))
+                    notesContainer.children.add(uiOf(note, dirFile))
                 }
             }
         })
