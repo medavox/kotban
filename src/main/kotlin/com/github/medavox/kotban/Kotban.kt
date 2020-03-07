@@ -5,6 +5,7 @@ import javafx.animation.KeyFrame
 import javafx.animation.Timeline
 import javafx.application.Application
 import javafx.event.EventHandler
+import javafx.geometry.Insets
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.*
@@ -12,8 +13,8 @@ import javafx.scene.control.Alert.AlertType.CONFIRMATION
 import javafx.scene.input.ClipboardContent
 import javafx.scene.input.DragEvent
 import javafx.scene.input.TransferMode
-import javafx.scene.layout.HBox
-import javafx.scene.layout.VBox
+import javafx.scene.layout.*
+import javafx.scene.paint.Color
 import javafx.scene.text.Font
 import javafx.stage.DirectoryChooser
 import javafx.stage.Stage
@@ -27,7 +28,6 @@ import java.io.File
 // filter by tag
 // wrap long column names
 // wrap long note names
-// show a visual hint about where the note will go
 // togglable MarkDown preview for .md files
 // allow dragging to a specific placement in the column?
 //   goes against our "ordering is alphabetical only" approach
@@ -147,7 +147,7 @@ class Kotban : Application() {
     }
 
     /**Generates the UI component hierarchy for a single Note.*/
-    private fun uiOf(note:Note, dirFile:File): Node = TitledPane().apply {
+    private fun uiOf(note:Note, dirFile:File): TitledPane = TitledPane().apply {
         //text = if(note.title.length < 30) note.title else note.title.substring(0, 30)+"…"//truncate long filenames
         text = note.title
         isExpanded = false
@@ -249,8 +249,35 @@ class Kotban : Application() {
                     //now instead of consuming, allow the content container to receive the drag_over event too
                     //event.consume()
                 }
+                var dragPreview:Node? = null
+                //show a visual hint about where the dragged note will go
+                notesContainer.setOnDragEntered { event:DragEvent ->
+                    val moveDest = File(column.folder, event.dragboard.files[0].name)
+                    //only show preview in destinations that are not also the source
+                    if(event.dragboard.files[0] != moveDest && event.dragboard.hasFiles()) {
+                        println("drag preview occurring in ${column.name}. dragPreview: $dragPreview")
+                        val n = Region().apply {
+                            background = Background(BackgroundFill(
+                                /*fill:Paint*/Color.LIMEGREEN,
+                                /*radii:CornerRadii*/ CornerRadii.EMPTY,//means squared corners
+                                /*insets:Insets*/ Insets.EMPTY
+                            ))
+                            prefHeight = 24.0
+                            prefWidthProperty().bind(notesContainer.prefWidthProperty())
+                        }
+                        dragPreview = n
+                        notesContainer.children.add(n)
+                    }
+                }
 
-                notesContainer.onDragDropped = EventHandler { event ->
+                //remove drag hint when the drag exits this column
+                notesContainer.setOnDragExited { event:DragEvent ->
+                    println("drag preview EXIT from ${column.name}")
+                    dragPreview?.let{notesContainer.children.remove(dragPreview)}
+                    dragPreview = null
+                }
+
+                notesContainer.setOnDragDropped { event ->
                     println("$this: onDragDropped: $event")
                     val db = event.dragboard
                     var success = false
