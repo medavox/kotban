@@ -1,0 +1,4 @@
+(fix) prevent a drag-move from overwriting an existing file with the same name
+implemented with a confirmation dialog
+
+doesn't show the dialog if the note is dragged voer its originating column

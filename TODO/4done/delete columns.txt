@@ -1,0 +1,3 @@
+be able to delete a column
+
+also involves recursively deleting all the notes in it

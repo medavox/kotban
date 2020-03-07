@@ -1,0 +1,5 @@
+show empty columns
+
+although a lot of systems ignore empty directories,
+in kanban this is a relatively common occurrence,
+and doesn't mean the column can be safely ignored.

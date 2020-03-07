@@ -1,0 +1,4 @@
+drag to move note to another column
+
+a pretty central piece of functionality for a kanban app.
+Required mastering the use of JavaFX's drag callbacks

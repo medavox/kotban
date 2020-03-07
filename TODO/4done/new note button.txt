@@ -1,0 +1,1 @@
+create new notes, prompting you for its name in a dialog 

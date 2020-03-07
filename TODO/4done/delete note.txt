@@ -1,0 +1,4 @@
+delete note
+
+deletes the file from disk.
+Also comes with a confirmation dialog

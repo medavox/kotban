@@ -1,0 +1,7 @@
+button: Expand/collapse all notes in all columns
+
+currently works as a toggle;
+would be better to find provide this behaviour AND
+unconditionally expanding or unconditionally collapsing all notes
+
+easily done with one global boolean

@@ -1,0 +1,11 @@
+open note in system-specific text editor
+
+hidden in a context menu;
+might want to provide a means of discovering this functionality
+
+this was actually redesigned after testing on linux;
+worked fine on mac, but not linux.
+Turns out there is no standard linux-specific command 
+to open in the system-default editor
+
+let alone (god forbid) a Java(/FX) platform agnostic method to do it

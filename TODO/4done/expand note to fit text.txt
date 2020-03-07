@@ -1,0 +1,25 @@
+match the height of the TextArea to the amount of space needed to display its text,
+
+including (the hard part) taking into account line wrapping
+
+Side-issue: incontrovertibly prevent the TextArea's own scrollbars from showing up
+
+related to (fix) vertical scrollbars on columns that aren't tall enough to need them,
+but which disappear after a refresh
+(fix) very long notes still have scrollbars,
+  cause scrollbars to appear on other notes in the same column
+
+
+this took A LOT of work to fix,
+and caused me to take a break from dev for a while.
+
+Ended up with me forking TextArea, so I could get at private variables
+that provided the behaviour I needed,
+
+this was AFTER I spent a couple of weeks essentially trying to
+ reverse-engineer JavaFX's text-wrapping algorithm,
+which turns out to be implemented externally in some weird possibly native module
+named Prism or Quantum.
+
+For more details of the ultimately unnecessary pain of tryig to figure this out,
+see the commit message for 7cd0b4d8e8021e1d769508db74162780dcf21ca4

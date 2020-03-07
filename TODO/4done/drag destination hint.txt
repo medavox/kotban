@@ -1,0 +1,1 @@
+while dragging, show a visual hint about where the note will go

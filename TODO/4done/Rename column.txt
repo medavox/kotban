@@ -1,0 +1,4 @@
+Rename column
+
+hidden in a context menu;
+might want to provide a means of discovering this functionality

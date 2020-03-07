@@ -1,0 +1,5 @@
+make column expand vertically,
+so you can drag onto empty space below a column's notes, as expected
+
+without this, the clumn wraps around its contained notes,
+leaving the empty space below them undraggable-to
