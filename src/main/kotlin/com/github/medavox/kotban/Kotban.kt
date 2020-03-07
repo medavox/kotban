@@ -20,7 +20,6 @@ import javafx.stage.Stage
 import javafx.util.Duration
 import java.io.File
 
-
 //todo:
 // line numbers in note contents
 // button: maximise a single note
@@ -48,8 +47,10 @@ class Kotban : Application() {
     private var allNoteNodes:MutableSet<TitledPane> = mutableSetOf()
     private var scrollVelocity:Double = 0.0
 
-    val COLUMN_WIDTH = 300.0
-    val EDGE_DRAG_SCROLLING_MARGIN = 64.0
+    private val COLUMN_WIDTH = 300.0
+    private val EDGE_DRAG_SCROLLING_MARGIN = 80.0
+    //Higher speed value = slower scroll.
+    private val SCROLLING_SPEED = 60
 
     /*Instead of making entries editable (and effectively having to write our own text editor),
     * make each entry, upon being clicked, open itself in the user's choice of editor.
@@ -71,25 +72,25 @@ class Kotban : Application() {
                 }))
             }
 
+            // when the mouse is near the edge of the window during a note drag,
+            //auto-scroll the columns container horizontally.
+            // scroll speed is propertional to the mouse's distance from the window edge
             setOnDragOver {event: DragEvent ->
-                //Higher speed value = slower scroll.
-                val speed = 70
                 val minDistanceFromRightEdge = this.width - EDGE_DRAG_SCROLLING_MARGIN
                 if(event.x < EDGE_DRAG_SCROLLING_MARGIN) {//dragging is occurring near the left edge; scroll left
                     val distanceMultiplier = (EDGE_DRAG_SCROLLING_MARGIN - event.x) / EDGE_DRAG_SCROLLING_MARGIN
-                    scrollVelocity = (-1.0 / speed) * distanceMultiplier
+                    scrollVelocity = (-1.0 / SCROLLING_SPEED) * distanceMultiplier
                     scrollTimeline.play()
                 }
                 else if (event.x > minDistanceFromRightEdge) {//near right edge, so scroll right
                     val distanceMultiplier = (event.x - minDistanceFromRightEdge) / EDGE_DRAG_SCROLLING_MARGIN
-                    scrollVelocity = (1.0 / speed) * distanceMultiplier
+                    scrollVelocity = (1.0 / SCROLLING_SPEED) * distanceMultiplier
                     scrollTimeline.play()
                 }
                 else {//dragging is occurring near neither edge; stop scrolling
                     scrollVelocity = 0.0
                     scrollTimeline.stop()
                 }
-                println("drag over event x:"+event.x)
                 event.consume()
             }
         }
