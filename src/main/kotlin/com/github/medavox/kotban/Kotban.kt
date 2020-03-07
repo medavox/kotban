@@ -228,7 +228,7 @@ class Kotban : Application() {
                 subtract(columnButtonBar.heightProperty()).
                 subtract(mainButtonBar.heightProperty())
             )
-            notesScrollPane.content = VBox().also {notesContainer ->
+            notesScrollPane.content = VBox().also { notesContainer ->
                 if(column.notes.isEmpty() || contentContainer.height >= notesScrollPane.height) {
                     //expand empty columns to fill the vertical space,
                     // so notes can be dragged into them
@@ -282,9 +282,14 @@ class Kotban : Application() {
                     event.isDropCompleted = success
                     event.consume()
                 }
-                for (note in column.notes) {
+                //In general you should reduce the number of changes in scene-graph (e.g adding/removing of children)
+                // because these can be expensive. It is generally faster to add many children in one step:
+                val noteUis = column.notes.map {uiOf(it, dirFile) }
+                notesContainer.children.addAll(noteUis)
+                //than by using a for-loop:
+                /*for (note in column.notes) {
                     notesContainer.children.add(uiOf(note, dirFile))
-                }
+                }*/
             }
         })
         val contextMenu = contextMenuFor(column, dirFile)
@@ -336,9 +341,14 @@ class Kotban : Application() {
     private fun layoutColumnContents(columns:List<Column>, dirFile:File):HBox {
         val uiColumns = HBox()
         allNoteNodes = mutableSetOf()//reset collection of all nodes, in case there was one before
-        for(column in columns) {
+        //In general you should reduce the number of changes in scene-graph (e.g adding/removing of children)
+        // because these can be expensive. It is generally faster to add many children in one step:
+        val columnUis = columns.map {uiOf(it, dirFile) }
+        uiColumns.children.addAll(columnUis)
+        //than by using a for-loop:
+        /*for(column in columns) {
             uiColumns.children.add(uiOf(column, dirFile))
-        }
+        }*/
         return uiColumns
     }
 
