@@ -93,6 +93,12 @@ class Kotban : Application() {
                 }
                 event.consume()
             }
+
+            //stops the auto-scroll if the drag is dropped while scrolling
+            setOnDragExited {
+                scrollVelocity = 0.0
+                scrollTimeline.stop()
+            }
         }
 
         mainButtonBar = ButtonBar().apply {
