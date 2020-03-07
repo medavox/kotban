@@ -257,7 +257,10 @@ class Kotban : Application() {
                     if (db.hasFiles()) {
                         println("files: ${db.files}")
                         val moveDest = File(column.folder, db.files[0].name)
-                        if(!moveDest.exists()) {
+                        if(db.files[0] == moveDest) {
+                            //skip transferral, the source and destination are the same
+                        }
+                        else if(!moveDest.exists()) {
                             db.files[0].renameTo(moveDest)
                             contentContainer.content = layoutColumnContents(Board.loadFrom(dirFile).columns, dirFile)
                         }else {//file already exists with that name; show dialog confirming overwrite
