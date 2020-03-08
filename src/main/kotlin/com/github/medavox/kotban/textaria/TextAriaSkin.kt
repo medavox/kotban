@@ -38,12 +38,11 @@ import javafx.scene.text.Text
 import javafx.util.Duration
 
 /**
- * Text area skin.
+ * A fork of JavaFX 8's Text area skin. Its internal scrollPane (and corresponding functionality) has been removed,
+ * and a public Property for its actual display-time added, for computing its correct height
+ * (given the number of lines its TextAria contains, and their wrapping).
  */
 class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAria, TextAriaBehavior>(textArea, TextAriaBehavior(textArea)) {
-    // *** NOTE: Multiple node mode is not yet fully implemented *** //
-    private val USE_MULTIPLE_NODES = false
-
     private var computedMinWidth: Double = Double.NEGATIVE_INFINITY
     private var computedMinHeight: Double = Double.NEGATIVE_INFINITY
     private var computedPrefWidth: Double = Double.NEGATIVE_INFINITY
@@ -166,11 +165,8 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         scrollSelectionFrames.add(KeyFrame(Duration.millis(350.0), scrollSelectionHandler))
 
         // Add initial text content
-        val n = if(USE_MULTIPLE_NODES) textArea.getParagraphs().size else 1
-        for (i in 0 until n) {
-            val paragraph: CharSequence = if(n == 1) textArea.textProperty().getValueSafe() else textArea.getParagraphs().get(i)
-            addParagraphNode(i, paragraph.toString())
-        }
+        val paragraph: CharSequence = textArea.textProperty().valueSafe
+        addParagraphNode(0, paragraph.toString())
 
         textArea.selectionProperty().addListener( {observable, oldValue, newValue ->
             // TODO Why do we need two calls here?
@@ -202,40 +198,11 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             updatePrefViewportHeight()
         })
 
-        if (USE_MULTIPLE_NODES) {
-            textArea.getParagraphs().addListener( { change: ListChangeListener.Change<out CharSequence> ->
-                while (change.next()) {
-                    val from: Int = change.getFrom()
-                    val to: Int = change.getTo()
-                    val removed:List<out CharSequence> = change.getRemoved()
-                    if (from < to) {
-
-                        if (removed.isEmpty()) {
-                            // This is an add
-                            for (i in from until to) {
-                                addParagraphNode(i, change.getList().get(i).toString())
-                            }
-                        } else {
-                            // This is an update
-                            for (i in from until to) {
-                                val node: Node = paragraphNodes.getChildren().get(i)
-                                val paragraphNode: Text = node as Text
-                                        paragraphNode.setText(change.getList().get(i).toString())
-                            }
-                        }
-                    } else {
-                        // This is a remove
-                        paragraphNodes.getChildren().subList(from, from + removed.size).clear()
-                    }
-                }
-            })
-        } else {
-            textArea.textProperty().addListener( {observable ->
-                invalidateMetrics()
-                (paragraphNodes.getChildren().get(0) as Text).setText(textArea.textProperty().getValueSafe())
-                contentView.requestLayout()
-            })
-        }
+        textArea.textProperty().addListener( {observable ->
+            invalidateMetrics()
+            (paragraphNodes.getChildren().get(0) as Text).setText(textArea.textProperty().getValueSafe())
+            contentView.requestLayout()
+        })
 
         usePromptText = object:BooleanBinding() {
             init{ bind(textArea.textProperty(), textArea.promptTextProperty()); }
@@ -843,19 +810,6 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         return Rectangle2D(x, y, width, height)
     }
 
-    override fun scrollCharacterToVisible(index: Int) {
-        //TODO We queue a callback because when characters are added or
-        // removed the bounds are not immediately updated; is this really
-        // necessary?
-
-        Platform.runLater {
-            if (getSkinnable().getLength() == 0) {
-                Unit
-            }
-            var characterBounds: Rectangle2D = getCharacterBounds(index)
-        }
-    }
-
     private fun scrollCaretToVisible() {
         val textArea: TextAria = getSkinnable()
         val bounds: Bounds = caretPath.getLayoutBounds()
@@ -934,9 +888,6 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     private fun getTextNode(): Text {
-        if (USE_MULTIPLE_NODES) {
-            throw IllegalArgumentException("Multiple node traversal is not yet implemented.")
-        }
         return paragraphNodes.getChildren().get(0) as Text
     }
 

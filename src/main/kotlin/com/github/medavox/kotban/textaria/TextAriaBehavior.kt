@@ -238,8 +238,6 @@ class TextAriaBehavior(textArea:TextAria) : TextInputControlBehavior<TextAria>(t
     private fun lineStart(select:Boolean, extendSelection:Boolean) = skin.lineStart(select, extendSelection)
     private fun lineEnd(select:Boolean, extendSelection:Boolean) = skin.lineEnd(select, extendSelection)
 
-    //TODO this method should be removed when TextAriaSkin is refactored to no longer need it.
-    override fun scrollCharacterToVisible(index:Int) = skin.scrollCharacterToVisible(index)
     override fun replaceText(start:Int, end:Int, txt:String) = control.replaceText(start, end, txt)
 
     /**
