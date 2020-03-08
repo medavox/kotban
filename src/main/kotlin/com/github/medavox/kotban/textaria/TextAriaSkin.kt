@@ -57,7 +57,12 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     private var promptNode: Text? = null
     private var usePromptText: ObservableBooleanValue
 
-    private var caretPosition: ObservableIntegerValue
+    private var caretPosition: ObservableIntegerValue = object:IntegerBinding() {
+        init{ bind(textArea.caretPositionProperty()) }
+        override protected fun computeValue(): Int {
+            return textArea.getCaretPosition()
+        }
+    }
     private var selectionHighlightGroup: Group = Group()
 
     private var scrollDirection: VerticalDirection? = null
@@ -66,8 +71,6 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     private var scrollSelectionTimeline: Timeline = Timeline()
 
-    //was static
-    private val SCROLL_RATE = 30
     // For dragging handles on embedded
     private var pressX: Double = 0.0
     private var pressY: Double = 0.0
@@ -102,46 +105,40 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     init {
-        caretPosition = object:IntegerBinding() {
-            init{ bind(textArea.caretPositionProperty()) }
-            override protected fun computeValue(): Int {
-                return textArea.getCaretPosition()
-            }
-        }
-        caretPosition.addListener( { observable, oldValue, newValue ->
+        caretPosition.addListener { _, oldValue, newValue ->
             targetCaretX = -1.0
             if (newValue.toInt() > oldValue.toInt()) {
                 setForwardBias(true)
             }
-        })
+        }
 
-        forwardBiasProperty().addListener( {observable ->
+        forwardBiasProperty().addListener { observable ->
             if (textArea.getWidth() > 0) {
                 updateTextNodeCaretPos(textArea.getCaretPosition())
             }
-        })
+        }
 
         // Initialize content
-        getChildren().add(contentView)
+        children.add(contentView)
 
-        getSkinnable().addEventFilter(ScrollEvent.ANY,  {event ->
-            if (event.isDirect() && handlePressed) {
+        skinnable.addEventFilter(ScrollEvent.ANY) { event ->
+            if (event.isDirect && handlePressed) {
                 event.consume()
             }
-        })
+        }
 
         // Add selection
-        selectionHighlightGroup.setManaged(false)
-        selectionHighlightGroup.setVisible(false)
-        contentView.getChildren().add(selectionHighlightGroup)
+        selectionHighlightGroup.isManaged = false
+        selectionHighlightGroup.isVisible = false
+        contentView.children.add(selectionHighlightGroup)
 
         // Add content view
-        paragraphNodes.setManaged(false)
-        contentView.getChildren().add(paragraphNodes)
+        paragraphNodes.isManaged = false
+        contentView.children.add(paragraphNodes)
 
         // Add caret
-        caretPath.setManaged(false)
-        caretPath.setStrokeWidth(1.0)
+        caretPath.isManaged = false
+        caretPath.strokeWidth = 1.0
         caretPath.fillProperty().bind(textFill)
         caretPath.strokeProperty().bind(textFill)
         // modifying visibility of the caret forces a layout-pass (RT-32373), so
@@ -152,15 +149,15 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                 return if(caretVisible.get()) 1.0 else 0.0
             }
         })
-        contentView.getChildren().add(caretPath)
+        contentView.children.add(caretPath)
 
         if (SHOW_HANDLES) {
-            contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2)
+            contentView.children.addAll(caretHandle, selectionHandle1, selectionHandle2)
         }
 
         // Initialize the scroll selection timeline
-        scrollSelectionTimeline.setCycleCount(Timeline.INDEFINITE)
-        val scrollSelectionFrames:MutableList<KeyFrame> = scrollSelectionTimeline.getKeyFrames()
+        scrollSelectionTimeline.cycleCount = Timeline.INDEFINITE
+        val scrollSelectionFrames:MutableList<KeyFrame> = scrollSelectionTimeline.keyFrames
         scrollSelectionFrames.clear()
         scrollSelectionFrames.add(KeyFrame(Duration.millis(350.0), scrollSelectionHandler))
 
@@ -168,49 +165,49 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         val paragraph: CharSequence = textArea.textProperty().valueSafe
         addParagraphNode(0, paragraph.toString())
 
-        textArea.selectionProperty().addListener( {observable, oldValue, newValue ->
+        textArea.selectionProperty().addListener { _, _, _ ->
             // TODO Why do we need two calls here?
             textArea.requestLayout()
             contentView.requestLayout()
-        })
+        }
 
-        textArea.wrapTextProperty().addListener( {observable, oldValue, newValue ->
+        textArea.wrapTextProperty().addListener { _, _, _ ->
             invalidateMetrics()
-        })
+        }
 
-        textArea.prefColumnCountProperty().addListener( {observable, oldValue, newValue ->
+        textArea.prefColumnCountProperty().addListener { _, _, _ ->
             invalidateMetrics()
             updatePrefViewportWidth()
-        })
+        }
 
-        textArea.prefRowCountProperty().addListener( {observable, oldValue, newValue ->
+        textArea.prefRowCountProperty().addListener { _, _, _ ->
             invalidateMetrics()
             updatePrefViewportHeight()
-        })
+        }
 
         updateFontMetrics()
-        fontMetrics.addListener( {valueModel ->
+        fontMetrics.addListener{ _ ->
             updateFontMetrics()
-        })
+        }
 
-        contentView.paddingProperty().addListener( {valueModel ->
+        contentView.paddingProperty().addListener { _ ->
             updatePrefViewportWidth()
             updatePrefViewportHeight()
-        })
+        }
 
-        textArea.textProperty().addListener( {observable ->
+        textArea.textProperty().addListener { _ ->
             invalidateMetrics()
-            (paragraphNodes.getChildren().get(0) as Text).setText(textArea.textProperty().getValueSafe())
+            (paragraphNodes.children[0] as Text).text = textArea.textProperty().valueSafe
             contentView.requestLayout()
-        })
+        }
 
         usePromptText = object:BooleanBinding() {
             init{ bind(textArea.textProperty(), textArea.promptTextProperty()); }
             override protected fun computeValue(): Boolean {
-                val txt: String = textArea.getText()
-                val promptTxt: String = textArea.getPromptText()
+                val txt: String? = textArea.text
+                val promptTxt: String? = textArea.promptText
                 return ((txt == null || txt.isEmpty()) &&
-                        promptTxt != null && !promptTxt.isEmpty())
+                        promptTxt != null && promptTxt.isNotEmpty())
             }
         }
 
@@ -218,22 +215,22 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             createPromptNode()
         }
 
-        usePromptText.addListener( {observable ->
+        usePromptText.addListener { _ ->
             createPromptNode()
             textArea.requestLayout()
-        })
+        }
 
         updateHighlightFill()
         updatePrefViewportWidth()
         updatePrefViewportHeight()
-        if (textArea.isFocused()) setCaretAnimating(true)
+        if (textArea.isFocused) setCaretAnimating(true)
 
         if (SHOW_HANDLES) {
-            selectionHandle1.setRotate(180.0)
+            selectionHandle1.rotate = 180.0
 
             val handlePressHandler:EventHandler<MouseEvent> =  EventHandler<MouseEvent>{e ->
-                pressX = e.getX()
-                pressY = e.getY()
+                pressX = e.x
+                pressY = e.y
                 handlePressed = true
                 e.consume()
             }
@@ -242,93 +239,89 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                 handlePressed = false
             }
 
-            caretHandle.setOnMousePressed(handlePressHandler)
-            selectionHandle1.setOnMousePressed(handlePressHandler)
-            selectionHandle2.setOnMousePressed(handlePressHandler)
+            caretHandle.onMousePressed = handlePressHandler
+            selectionHandle1.onMousePressed = handlePressHandler
+            selectionHandle2.onMousePressed = handlePressHandler
 
-            caretHandle.setOnMouseReleased(handleReleaseHandler)
-            selectionHandle1.setOnMouseReleased(handleReleaseHandler)
-            selectionHandle2.setOnMouseReleased(handleReleaseHandler)
+            caretHandle.onMouseReleased = handleReleaseHandler
+            selectionHandle1.onMouseReleased = handleReleaseHandler
+            selectionHandle2.onMouseReleased = handleReleaseHandler
 
-            caretHandle.setOnMouseDragged( {e ->
+            caretHandle.setOnMouseDragged {e ->
                 val textNode: Text = getTextNode()
                 val tp: Point2D = textNode.localToScene(0.0, 0.0)
-                val p: Point2D = Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + caretHandle.getWidth() / 2,
-                    e.getSceneY() - tp.getY() - pressY - 6)
+                val p = Point2D(e.sceneX - tp.x + 10/*??*/ - pressX + caretHandle.width / 2,
+                    e.sceneY - tp.y - pressY - 6)
                 val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
-                val pos: Int = hit.getCharIndex()
+                val pos: Int = hit.charIndex
                 if (pos > 0) {
-                    val oldPos: Int = textNode.getImpl_caretPosition()
-                    textNode.setImpl_caretPosition(pos)
-                    val element: PathElement = textNode.getImpl_caretShape()[0]
-                    if (element is MoveTo && (element as MoveTo).getY() > e.getY() - getTextTranslateY()) {
-                        hit.setCharIndex(pos - 1)
+                    val oldPos: Int = textNode.impl_caretPosition
+                    textNode.impl_caretPosition = pos
+                    val element: PathElement = textNode.impl_caretShape[0]
+                    if (element is MoveTo && (element as MoveTo).y > e.y - getTextTranslateY()) {
+                        hit.charIndex = pos - 1
                     }
-                    textNode.setImpl_caretPosition(oldPos)
+                    textNode.impl_caretPosition = oldPos
                 }
-                positionCaret(hit, false, false)
+                positionCaret(hit, select = false, extendSelection = false)
                 e.consume()
-            })
+            }
 
-            selectionHandle1.setOnMouseDragged(object:EventHandler<MouseEvent> {
-                override fun handle(e: MouseEvent) {
-                    val textArea: TextAria = skinnable
-                    val textNode: Text = getTextNode()
-                    val tp: Point2D = textNode.localToScene(0.0, 0.0)
-                    val p: Point2D = Point2D(e.sceneX - tp.x + 10/*??*/ - pressX + selectionHandle1.width / 2,
-                        e.sceneY - tp.y - pressY + selectionHandle1.height + 5)
-                    val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
-                    var pos: Int = hit.getCharIndex()
-                    if (textArea.getAnchor() < textArea.getCaretPosition()) {
-                        // Swap caret and anchor
-                        textArea.selectRange(textArea.getCaretPosition(), textArea.getAnchor())
-                    }
-                    if (pos > 0) {
-                        if (pos >= textArea.getAnchor()) {
-                            pos = textArea.getAnchor()
-                        }
-                        val oldPos: Int = textNode.getImpl_caretPosition()
-                        textNode.impl_caretPosition = pos
-                        val element: PathElement = textNode.getImpl_caretShape()[0]
-                        if (element is MoveTo && (element as MoveTo).getY() > e.getY() - getTextTranslateY()) {
-                            hit.setCharIndex(pos - 1)
-                        }
-                        textNode.impl_caretPosition = oldPos
-                    }
-                    positionCaret(hit, true, false)
-                    e.consume()
+            selectionHandle1.setOnMouseDragged { e ->
+                val textArea: TextAria = skinnable
+                val textNode: Text = getTextNode()
+                val tp: Point2D = textNode.localToScene(0.0, 0.0)
+                val p = Point2D(e.sceneX - tp.x + 10/*??*/ - pressX + selectionHandle1.width / 2,
+                    e.sceneY - tp.y - pressY + selectionHandle1.height + 5)
+                val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
+                var pos: Int = hit.charIndex
+                if (textArea.anchor < textArea.caretPosition) {
+                    // Swap caret and anchor
+                    textArea.selectRange(textArea.caretPosition, textArea.anchor)
                 }
-            })
+                if (pos > 0) {
+                    if (pos >= textArea.anchor) {
+                        pos = textArea.anchor
+                    }
+                    val oldPos: Int = textNode.impl_caretPosition
+                    textNode.impl_caretPosition = pos
+                    val element: PathElement = textNode.impl_caretShape[0]
+                    if (element is MoveTo && element.y > e.y - getTextTranslateY()) {
+                        hit.charIndex = pos - 1
+                    }
+                    textNode.impl_caretPosition = oldPos
+                }
+                positionCaret(hit, select = true, extendSelection = false)
+                e.consume()
+            }
 
-            selectionHandle2.setOnMouseDragged(object:EventHandler<MouseEvent> {
-                override fun handle(e: MouseEvent) {
-                    val textArea: TextAria = getSkinnable()
-                    val textNode: Text = getTextNode()
-                    val tp: Point2D = textNode.localToScene(0.0, 0.0)
-                    val p: Point2D = Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle2.getWidth() / 2,
-                        e.getSceneY() - tp.getY() - pressY - 6)
-                    val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
-                    var pos: Int = hit.getCharIndex()
-                    if (textArea.getAnchor() > textArea.getCaretPosition()) {
-                        // Swap caret and anchor
-                        textArea.selectRange(textArea.getCaretPosition(), textArea.getAnchor())
-                    }
-                    if (pos > 0) {
-                        if (pos <= textArea.getAnchor() + 1) {
-                            pos = Math.min(textArea.getAnchor() + 2, textArea.getLength())
-                        }
-                        val oldPos: Int = textNode.getImpl_caretPosition()
-                        textNode.setImpl_caretPosition(pos)
-                        val element: PathElement = textNode.getImpl_caretShape()[0]
-                        if (element is MoveTo && (element as MoveTo).getY() > e.getY() - getTextTranslateY()) {
-                            hit.setCharIndex(pos - 1)
-                        }
-                        textNode.setImpl_caretPosition(oldPos)
-                        positionCaret(hit, true, false)
-                    }
-                    e.consume()
+            selectionHandle2.setOnMouseDragged { e ->
+                val textArea: TextAria = skinnable
+                val textNode: Text = getTextNode()
+                val tp: Point2D = textNode.localToScene(0.0, 0.0)
+                val p = Point2D(e.sceneX - tp.x + 10/*??*/ - pressX + selectionHandle2.width / 2,
+                    e.sceneY - tp.y - pressY - 6)
+                val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
+                var pos: Int = hit.charIndex
+                if (textArea.anchor > textArea.caretPosition) {
+                    // Swap caret and anchor
+                    textArea.selectRange(textArea.caretPosition, textArea.anchor)
                 }
-            })
+                if (pos > 0) {
+                    if (pos <= textArea.anchor + 1) {
+                        pos = Math.min(textArea.anchor + 2, textArea.length)
+                    }
+                    val oldPos: Int = textNode.impl_caretPosition
+                    textNode.impl_caretPosition = pos
+                    val element: PathElement = textNode.impl_caretShape[0]
+                    if (element is MoveTo && element.y > e.y - getTextTranslateY()) {
+                        hit.charIndex = pos - 1
+                    }
+                    textNode.impl_caretPosition = oldPos
+                    positionCaret(hit, select = true, extendSelection = false)
+                }
+                e.consume()
+            }
         }
     }
 
@@ -343,22 +336,16 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     private inner class ContentView : Region() {
         init{
-            getStyleClass().add("content")
+            styleClass.add("content")
 
-            addEventHandler(MouseEvent.MOUSE_PRESSED,  {event ->
-                getBehavior().mousePressed(event)
+            val eventHandler:((MouseEvent) -> Unit) = { event ->
+                behavior.mousePressed(event)
                 event.consume()
-            })
+            }
 
-            addEventHandler(MouseEvent.MOUSE_RELEASED,  {event ->
-                getBehavior().mouseReleased(event)
-                event.consume()
-            })
-
-            addEventHandler(MouseEvent.MOUSE_DRAGGED,  {event ->
-                getBehavior().mouseDragged(event)
-                event.consume()
-            })
+            addEventHandler(MouseEvent.MOUSE_PRESSED, eventHandler)
+            addEventHandler(MouseEvent.MOUSE_RELEASED, eventHandler)
+            addEventHandler(MouseEvent.MOUSE_DRAGGED, eventHandler)
         }
 
         override fun getContentBias(): Orientation {
@@ -369,11 +356,11 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             if (computedPrefWidth < 0) {
                 var prefWidth: Double = 0.0
 
-                for (node: Node in paragraphNodes.getChildren()) {
+                for (node: Node in paragraphNodes.children) {
                     val paragraphNode: Text = node as Text
                     prefWidth = Math.max(prefWidth,
-                            Utils.computeTextWidth(paragraphNode.getFont(),
-                                    paragraphNode.getText(), 0.0))
+                            Utils.computeTextWidth(paragraphNode.font,
+                                    paragraphNode.text, 0.0))
                 }
 
                 prefWidth += snappedLeftInset() + snappedRightInset()
@@ -390,22 +377,21 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             }
 
             if (computedPrefHeight < 0) {
-                val wrappingWidth: Double
-                if (width == -1.0) {//FIXME: never check floating point for equality
-                    wrappingWidth = 0.0
-                } else {
-                    wrappingWidth = Math.max(width - (snappedLeftInset() + snappedRightInset()), 0.0)
+                //FIXME: never check floating point for equality
+                val wrappingWidth: Double = if (width == -1.0) 0.0 else {
+                    Math.max(width - (snappedLeftInset() + snappedRightInset()), 0.0)
                 }
 
                 var prefHeight: Double = 0.0
 
-                for (node: Node in paragraphNodes.getChildren()) {
+                for (node: Node in paragraphNodes.children) {
                     val paragraphNode: Text = node as Text
                     prefHeight += Utils.computeTextHeight(
-                            paragraphNode.getFont(),
-                            paragraphNode.getText(),
+                            paragraphNode.font,
+                            paragraphNode.text,
                             wrappingWidth,
-                            paragraphNode.getBoundsType())
+                            paragraphNode.boundsType
+                    )
                 }
 
                 prefHeight += snappedTopInset() + snappedBottomInset()
@@ -436,8 +422,8 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         }
 
         public override fun layoutChildren() {
-            val textArea: TextAria = getSkinnable()
-            val width: Double = getWidth()
+            val textArea: TextAria = skinnable
+            val width: Double = width
             //System.out.println("HERE width: "+width);
 
             // Lay out paragraphs
@@ -449,17 +435,17 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             var y: Double = topPadding
             //System.out.println("HERE  snappedTopInset: "+y);
 
-            val paragraphNodesChildren:List<Node> = paragraphNodes.getChildren()
+            val paragraphNodesChildren:List<Node> = paragraphNodes.children
 
-            for (i in 0 until paragraphNodesChildren.size) {
-                val node: Node = paragraphNodesChildren.get(i)
+            for (i in paragraphNodesChildren.indices) {
+                val node: Node = paragraphNodesChildren[i]
                 val paragraphNode: Text = node as Text
-                paragraphNode.setWrappingWidth(wrappingWidth)
+                paragraphNode.wrappingWidth = wrappingWidth
 
-                val bounds: Bounds = paragraphNode.getBoundsInLocal()
-                paragraphNode.setLayoutX(leftPadding)
-                paragraphNode.setLayoutY(y)
-                y += bounds.getHeight()
+                val bounds: Bounds = paragraphNode.boundsInLocal
+                paragraphNode.layoutX = leftPadding
+                paragraphNode.layoutY = y
+                y += bounds.height
             }
 
             //notify as a property from here
@@ -468,23 +454,23 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             hajt.set(y)
 
             promptNode?.let {
-                it.setLayoutX(leftPadding)
-                it.setLayoutY(topPadding + it.getBaselineOffset())
-                it.setWrappingWidth(wrappingWidth)
+                it.layoutX = leftPadding
+                it.layoutY = topPadding + it.baselineOffset
+                it.wrappingWidth = wrappingWidth
             }
 
             // Update the selection
-            val selection: IndexRange = textArea.getSelection()
-            val oldCaretBounds: Bounds? = caretPath.getBoundsInParent()
+            val selection: IndexRange = textArea.selection
+            val oldCaretBounds: Bounds? = caretPath.boundsInParent
 
-            selectionHighlightGroup.getChildren().clear()
+            selectionHighlightGroup.children.clear()
 
-            val caretPos: Int = textArea.getCaretPosition()
-            val anchorPos: Int = textArea.getAnchor()
+            val caretPos: Int = textArea.caretPosition
+            val anchorPos: Int = textArea.anchor
 
             if (SHOW_HANDLES) {
                 // Install and resize the handles for caret and anchor.
-                if (selection.getLength() > 0) {
+                if (selection.length > 0) {
                     selectionHandle1.resize(selectionHandle1.prefWidth(-1.0),
                             selectionHandle1.prefHeight(-1.0))
                     selectionHandle2.resize(selectionHandle2.prefWidth(-1.0),
@@ -496,84 +482,84 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
                 // Position the handle for the anchor. This could be handle1 or handle2.
                 // Do this before positioning the actual caret.
-                if (selection.getLength() > 0) {
+                if (selection.length > 0) {
                     var paragraphIndex: Int = paragraphNodesChildren.size
-                    var paragraphOffset: Int = textArea.getLength() + 1
+                    var paragraphOffset: Int = textArea.length + 1
                     var paragraphNode: Text
                     do {
-                        paragraphNode = paragraphNodesChildren.get(--paragraphIndex) as Text
-                        paragraphOffset -= paragraphNode.getText().length + 1
+                        paragraphNode = paragraphNodesChildren[--paragraphIndex] as Text
+                        paragraphOffset -= paragraphNode.text.length + 1
                     } while (anchorPos < paragraphOffset)
 
                     updateTextNodeCaretPos(anchorPos - paragraphOffset)
-                    caretPath.getElements().clear()
-                    caretPath.getElements().addAll(paragraphNode.getImpl_caretShape())
-                    caretPath.setLayoutX(paragraphNode.getLayoutX())
-                    caretPath.setLayoutY(paragraphNode.getLayoutY())
+                    caretPath.elements.clear()
+                    caretPath.elements.addAll(paragraphNode.impl_caretShape)
+                    caretPath.layoutX = paragraphNode.layoutX
+                    caretPath.layoutY = paragraphNode.layoutY
 
-                    val b: Bounds = caretPath.getBoundsInParent()
+                    val b: Bounds = caretPath.boundsInParent
                     if (caretPos < anchorPos) {
-                        selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2)
-                        selectionHandle2.setLayoutY(b.getMaxY() - 1)
+                        selectionHandle2.layoutX = b.minX - selectionHandle2.width / 2
+                        selectionHandle2.layoutY = b.maxY - 1
                     } else {
-                        selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2)
-                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1)
+                        selectionHandle1.layoutX = b.minX - selectionHandle1.width / 2
+                        selectionHandle1.layoutY = b.minY - selectionHandle1.height + 1
                     }
                 }
             }
 
             // Position caret
             var paragraphIndex: Int = paragraphNodesChildren.size
-            var paragraphOffset: Int = textArea.getLength() + 1
+            var paragraphOffset: Int = textArea.length + 1
 
             var paragraphNode: Text
             do {
-                paragraphNode = paragraphNodesChildren.get(--paragraphIndex) as Text
-                paragraphOffset -= paragraphNode.getText().length + 1
+                paragraphNode = paragraphNodesChildren[--paragraphIndex] as Text
+                paragraphOffset -= paragraphNode.text.length + 1
             } while (caretPos < paragraphOffset)
 
             updateTextNodeCaretPos(caretPos - paragraphOffset)
 
-            caretPath.getElements().clear()
-            caretPath.getElements().addAll(paragraphNode.getImpl_caretShape())
+            caretPath.elements.clear()
+            caretPath.elements.addAll(paragraphNode.impl_caretShape)
 
-            caretPath.setLayoutX(paragraphNode.getLayoutX())
+            caretPath.layoutX = paragraphNode.layoutX
 
             // TODO: Remove this temporary workaround for RT-27533
-            paragraphNode.setLayoutX(2 * paragraphNode.getLayoutX() - paragraphNode.getBoundsInParent().getMinX())
+            paragraphNode.layoutX = 2 * paragraphNode.layoutX - paragraphNode.boundsInParent.minX
 
-            caretPath.setLayoutY(paragraphNode.getLayoutY())
-            if (oldCaretBounds == null || !oldCaretBounds.equals(caretPath.getBoundsInParent())) {
+            caretPath.layoutY = paragraphNode.layoutY
+            if (oldCaretBounds == null || oldCaretBounds != caretPath.boundsInParent) {
                 scrollCaretToVisible()
             }
 
             // Update selection fg and bg
-            var start: Int = selection.getStart()
-            var end: Int = selection.getEnd()
-            for (i in 0 until paragraphNodesChildren.size) {
-                val paragraphNode: Node = paragraphNodesChildren.get(i)
+            var start: Int = selection.start
+            var end: Int = selection.end
+            for (i in paragraphNodesChildren.indices) {
+                val paragraphNode: Node = paragraphNodesChildren[i]
                 val textNode: Text = paragraphNode as Text
-                val paragraphLength: Int = textNode.getText().length + 1
+                val paragraphLength: Int = textNode.text.length + 1
                 if (end > start && start < paragraphLength) {
-                    textNode.setImpl_selectionStart(start)
-                    textNode.setImpl_selectionEnd(Math.min(end, paragraphLength))
+                    textNode.impl_selectionStart = start
+                    textNode.impl_selectionEnd = Math.min(end, paragraphLength)
 
                     val selectionHighlightPath: Path = Path()
-                    selectionHighlightPath.setManaged(false)
-                    selectionHighlightPath.setStroke(null)
-                    val selectionShape: Array<PathElement>? = textNode.getImpl_selectionShape()
+                    selectionHighlightPath.isManaged = false
+                    selectionHighlightPath.stroke = null
+                    val selectionShape: Array<PathElement>? = textNode.impl_selectionShape
                     if (selectionShape != null) {
-                        selectionHighlightPath.getElements().addAll(selectionShape)
+                        selectionHighlightPath.elements.addAll(selectionShape)
                     }
-                    selectionHighlightGroup.getChildren().add(selectionHighlightPath)
-                    selectionHighlightGroup.setVisible(true)
-                    selectionHighlightPath.setLayoutX(textNode.getLayoutX())
-                    selectionHighlightPath.setLayoutY(textNode.getLayoutY())
+                    selectionHighlightGroup.children.add(selectionHighlightPath)
+                    selectionHighlightGroup.isVisible = true
+                    selectionHighlightPath.layoutX = textNode.layoutX
+                    selectionHighlightPath.layoutY = textNode.layoutY
                     updateHighlightFill()
                 } else {
-                    textNode.setImpl_selectionStart(-1)
-                    textNode.setImpl_selectionEnd(-1)
-                    selectionHighlightGroup.setVisible(false)
+                    textNode.impl_selectionStart = -1
+                    textNode.impl_selectionEnd = -1
+                    selectionHighlightGroup.isVisible = false
                 }
                 start = Math.max(0, start - paragraphLength)
                 end   = Math.max(0, end   - paragraphLength)
@@ -582,28 +568,28 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             if (SHOW_HANDLES) {
                 // Position handle for the caret. This could be handle1 or handle2 when
                 // a selection is active.
-                val b: Bounds = caretPath.getBoundsInParent()
-                if (selection.getLength() > 0) {
+                val b: Bounds = caretPath.boundsInParent
+                if (selection.length > 0) {
                     if (caretPos < anchorPos) {
-                        selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2)
-                        selectionHandle1.setLayoutY(b.getMinY() - selectionHandle1.getHeight() + 1)
+                        selectionHandle1.layoutX = b.minX - selectionHandle1.width / 2
+                        selectionHandle1.layoutY = b.minY - selectionHandle1.height + 1
                     } else {
-                        selectionHandle2.setLayoutX(b.getMinX() - selectionHandle2.getWidth() / 2)
-                        selectionHandle2.setLayoutY(b.getMaxY() - 1)
+                        selectionHandle2.layoutX = b.minX - selectionHandle2.width / 2
+                        selectionHandle2.layoutY = b.maxY - 1
                     }
                 } else {
-                    caretHandle.setLayoutX(b.getMinX() - caretHandle.getWidth() / 2 + 1)
-                    caretHandle.setLayoutY(b.getMaxY())
+                    caretHandle.layoutX = b.minX - caretHandle.width / 2 + 1
+                    caretHandle.layoutY = b.maxY
                 }
             }
 
-            if (contentView.getPrefWidth() == 0.0 || contentView.getPrefHeight() == 0.0) {
+            if (contentView.prefWidth == 0.0 || contentView.prefHeight == 0.0) {
                 updatePrefViewportWidth()
                 updatePrefViewportHeight()
-                if (getParent() != null && contentView.getPrefWidth() > 0
-                        || contentView.getPrefHeight() > 0) {
+                if (parent != null && contentView.prefWidth > 0
+                        || contentView.prefHeight > 0) {
                     // Force layout of viewRect in ScrollPaneSkin
-                    getParent().requestLayout()
+                    parent.requestLayout()
                 }
             }
         }
@@ -638,16 +624,16 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     private fun addParagraphNode(i: Int, string: String) {
-        val textArea: TextAria = getSkinnable()
-        val paragraphNode: Text = Text(string)
-        paragraphNode.setTextOrigin(VPos.TOP)
-        paragraphNode.setManaged(false)
-        paragraphNode.getStyleClass().add("text")
-        paragraphNode.boundsTypeProperty().addListener { observable, oldValue, newValue ->
+        val textArea: TextAria = skinnable
+        val paragraphNode = Text(string)
+        paragraphNode.textOrigin = VPos.TOP
+        paragraphNode.isManaged = false
+        paragraphNode.styleClass.add("text")
+        paragraphNode.boundsTypeProperty().addListener { _, _, _ ->
             invalidateMetrics()
             updateFontMetrics()
         }
-        paragraphNodes.getChildren().add(i, paragraphNode)
+        paragraphNodes.children.add(i, paragraphNode)
 
         paragraphNode.fontProperty().bind(textArea.fontProperty())
         paragraphNode.fillProperty().bind(textFill)
@@ -660,8 +646,8 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     override fun computeBaselineOffset(topInset: Double, rightInset: Double, bottomInset: Double, leftInset: Double): Double {
-        val firstParagraph: Text = paragraphNodes.getChildren().get(0) as Text
-        return Utils.getAscent(getSkinnable().getFont(),firstParagraph.getBoundsType()) +
+        val firstParagraph: Text = paragraphNodes.children[0] as Text
+        return Utils.getAscent(skinnable.font, firstParagraph.boundsType) +
                 contentView.snappedTopInset() + textArea.snappedTopInset()
     }
 
@@ -685,40 +671,40 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     override fun getInsertionPoint(x:Double, y:Double):Int {
-        val textArea: TextAria = getSkinnable()
+        val textArea: TextAria = skinnable
 
-        val n: Int = paragraphNodes.getChildren().size
+        val n: Int = paragraphNodes.children.size
         var index: Int = -1
 
         if (n > 0) {
             if (y < contentView.snappedTopInset()) {
                 // Select the character at x in the first row
-                val paragraphNode: Text = paragraphNodes.getChildren().get(0) as Text
+                val paragraphNode: Text = paragraphNodes.children[0] as Text
                 index = getNextInsertionPoint(paragraphNode, x, -1, VerticalDirection.DOWN)
-            } else if (y > contentView.snappedTopInset() + contentView.getHeight()) {
+            } else if (y > contentView.snappedTopInset() + contentView.height) {
                 // Select the character at x in the last row
                 val lastParagraphIndex: Int = n - 1
-                val lastParagraphView: Text = paragraphNodes.getChildren().get(lastParagraphIndex) as Text
+                val lastParagraphView: Text = paragraphNodes.children[lastParagraphIndex] as Text
 
                 index = getNextInsertionPoint(lastParagraphView, x, -1, VerticalDirection.UP)
-                        + (textArea.getLength() - lastParagraphView.getText().length)
+                        + (textArea.length - lastParagraphView.text.length)
             } else {
                 // Select the character at x in the row at y
                 var paragraphOffset: Int = 0
                 for (i in 0 until n) {
-                    val paragraphNode: Text = paragraphNodes.getChildren().get(i) as Text
+                    val paragraphNode: Text = paragraphNodes.children[i] as Text
 
-                    val bounds: Bounds = paragraphNode.getBoundsInLocal()
-                    val paragraphViewY: Double = paragraphNode.getLayoutY() + bounds.getMinY()
+                    val bounds: Bounds = paragraphNode.boundsInLocal
+                    val paragraphViewY: Double = paragraphNode.layoutY + bounds.minY
                     if (y >= paragraphViewY
-                            && y < paragraphViewY + paragraphNode.getBoundsInLocal().getHeight()) {
+                            && y < paragraphViewY + paragraphNode.boundsInLocal.height) {
                         index = getInsertionPoint(paragraphNode,
-                                x - paragraphNode.getLayoutX(),
-                                y - paragraphNode.getLayoutY()) + paragraphOffset
+                                x - paragraphNode.layoutX,
+                                y - paragraphNode.layoutY) + paragraphOffset
                         break
                     }
 
-                    paragraphOffset += paragraphNode.getText().length + 1
+                    paragraphOffset += paragraphNode.text.length + 1
                 }
             }
         }
@@ -727,34 +713,34 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     fun positionCaret(hit: HitInfo, select: Boolean, extendSelection: Boolean) {
-        var pos: Int = Utils.getHitInsertionIndex(hit, getSkinnable().getText())
+        var pos: Int = Utils.getHitInsertionIndex(hit, skinnable.text)
         val isNewLine: Boolean =
                 (pos > 0 &&
-                        pos <= getSkinnable().getLength() &&
-                        getSkinnable().getText().codePointAt(pos-1) == 0x0a)
+                        pos <= skinnable.length &&
+                        skinnable.text.codePointAt(pos-1) == 0x0a)
 
         // special handling for a line
-        if (!hit.isLeading() && isNewLine) {
-            hit.setLeading(true)
+        if (!hit.isLeading && isNewLine) {
+            hit.isLeading = true
             pos -= 1
         }
 
         if (select) {
             if (extendSelection) {
-                getSkinnable().extendSelection(pos)
+                skinnable.extendSelection(pos)
             } else {
-                getSkinnable().selectPositionCaret(pos)
+                skinnable.selectPositionCaret(pos)
             }
         } else {
-            getSkinnable().positionCaret(pos)
+            skinnable.positionCaret(pos)
         }
 
-        setForwardBias(hit.isLeading())
+        isForwardBias = hit.isLeading
     }
 
     private fun getInsertionPoint(paragraphNode: Text, x: Double, y: Double):Int {
         val hitInfo: HitInfo = paragraphNode.impl_hitTestChar(Point2D(x, y))
-        return Utils.getHitInsertionIndex(hitInfo, paragraphNode.getText())
+        return Utils.getHitInsertionIndex(hitInfo, paragraphNode.text)
     }
 
     fun getNextInsertionPoint(x: Double, from: Int, scrollDirection: VerticalDirection):Int {
@@ -769,38 +755,38 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     override fun getCharacterBounds(index: Int): Rectangle2D {
-        val textArea: TextAria = getSkinnable()
+        val textArea: TextAria = skinnable
 
-        var paragraphIndex: Int = paragraphNodes.getChildren().size
-        var paragraphOffset: Int = textArea.getLength() + 1
+        var paragraphIndex: Int = paragraphNodes.children.size
+        var paragraphOffset: Int = textArea.length + 1
 
         var paragraphNode: Text
         do {
-            paragraphNode = paragraphNodes.getChildren().get(--paragraphIndex) as Text
-            paragraphOffset -= paragraphNode.getText().length + 1
+            paragraphNode = paragraphNodes.children[--paragraphIndex] as Text
+            paragraphOffset -= paragraphNode.text.length + 1
         } while (index < paragraphOffset)
 
         var characterIndex: Int = index - paragraphOffset
         var terminator: Boolean = false
 
-        if (characterIndex == paragraphNode.getText().length) {
+        if (characterIndex == paragraphNode.text.length) {
             characterIndex--
             terminator = true
         }
 
-        characterBoundingPath.getElements().clear()
-        characterBoundingPath.getElements().addAll(paragraphNode.impl_getRangeShape(characterIndex, characterIndex + 1))
-        characterBoundingPath.setLayoutX(paragraphNode.getLayoutX())
-        characterBoundingPath.setLayoutY(paragraphNode.getLayoutY())
+        characterBoundingPath.elements.clear()
+        characterBoundingPath.elements.addAll(paragraphNode.impl_getRangeShape(characterIndex, characterIndex + 1))
+        characterBoundingPath.layoutX = paragraphNode.layoutX
+        characterBoundingPath.layoutY = paragraphNode.layoutY
 
-        val bounds: Bounds = characterBoundingPath.getBoundsInLocal()
+        val bounds: Bounds = characterBoundingPath.boundsInLocal
 
-        var x: Double = bounds.getMinX() + paragraphNode.getLayoutX() - textArea.getScrollLeft()
-        val y: Double = bounds.getMinY() + paragraphNode.getLayoutY() - textArea.getScrollTop()
+        var x: Double = bounds.minX + paragraphNode.layoutX - textArea.scrollLeft
+        val y: Double = bounds.minY + paragraphNode.layoutY - textArea.scrollTop
 
         // Sometimes the bounds is empty, in which case we must ignore the width/height
-        var width: Double = if(bounds.isEmpty()) 0.0 else bounds.getWidth()
-        val height: Double = if(bounds.isEmpty()) 0.0 else bounds.getHeight()
+        var width: Double = if(bounds.isEmpty) 0.0 else bounds.width
+        val height: Double = if(bounds.isEmpty) 0.0 else bounds.height
 
         if (terminator) {
             x += width
@@ -811,47 +797,47 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     private fun scrollCaretToVisible() {
-        val textArea: TextAria = getSkinnable()
-        val bounds: Bounds = caretPath.getLayoutBounds()
-        var x: Double = bounds.getMinX() - textArea.getScrollLeft()
-        var y: Double = bounds.getMinY() - textArea.getScrollTop()
-        var w: Double = bounds.getWidth()
-        var h: Double = bounds.getHeight()
+        val textArea: TextAria = skinnable
+        val bounds: Bounds = caretPath.layoutBounds
+        var x: Double = bounds.minX - textArea.scrollLeft
+        var y: Double = bounds.minY - textArea.scrollTop
+        var w: Double = bounds.width
+        var h: Double = bounds.height
 
         if (SHOW_HANDLES) {
-            if (caretHandle.isVisible()) {
-                h += caretHandle.getHeight()
-            } else if (selectionHandle1.isVisible() && selectionHandle2.isVisible()) {
-                x -= selectionHandle1.getWidth() / 2
-                y -= selectionHandle1.getHeight()
-                w += selectionHandle1.getWidth() / 2 + selectionHandle2.getWidth() / 2
-                h += selectionHandle1.getHeight() + selectionHandle2.getHeight()
+            if (caretHandle.isVisible) {
+                h += caretHandle.height
+            } else if (selectionHandle1.isVisible && selectionHandle2.isVisible) {
+                x -= selectionHandle1.width / 2
+                y -= selectionHandle1.height
+                w += selectionHandle1.width / 2 + selectionHandle2.width / 2
+                h += selectionHandle1.height + selectionHandle2.height
             }
         }
     }
 
     private fun updatePrefViewportWidth() {
-        val columnCount: Int = getSkinnable().getPrefColumnCount()
-        contentView.setPrefWidth(columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset())
-        contentView.setMinWidth(characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset())
+        val columnCount: Int = skinnable.prefColumnCount
+        contentView.prefWidth = columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset()
+        contentView.minWidth = characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset()
     }
 
     private fun updatePrefViewportHeight() {
-        val rowCount: Int = getSkinnable().getPrefRowCount()
-        contentView.setPrefHeight(rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset())
-        contentView.setMinHeight(lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset())
+        val rowCount: Int = skinnable.prefRowCount
+        contentView.prefHeight = rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset()
+        contentView.minHeight = lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset()
     }
 
     private fun updateFontMetrics() {
-        val firstParagraph: Text = paragraphNodes.getChildren().get(0) as Text
-        lineHeight = Utils.getLineHeight(getSkinnable().getFont(),firstParagraph.getBoundsType())
+        val firstParagraph: Text = paragraphNodes.children[0] as Text
+        lineHeight = Utils.getLineHeight(skinnable.font,firstParagraph.boundsType)
         characterWidth = fontMetrics.get().computeStringWidth("W").toDouble()
     }
 
     override protected fun updateHighlightFill() {
-        for (node: Node in selectionHighlightGroup.getChildren()) {
+        for (node: Node in selectionHighlightGroup.children) {
             var selectionHighlightPath: Path = node as Path
-            selectionHighlightPath.setFill(highlightFill.get())
+            selectionHighlightPath.fill = highlightFill.get()
         }
     }
 
@@ -871,74 +857,60 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     // Callbacks from Behavior class
 
-    private fun getTextTranslateX():Double {
-        return contentView.snappedLeftInset()
-    }
-
-    private fun getTextTranslateY():Double {
-        return contentView.snappedTopInset()
-    }
-
-    private fun getTextLeft():Double {
-        return 0.0
-    }
-
-    private fun translateCaretPosition(p: Point2D): Point2D {
-        return p
-    }
-
-    private fun getTextNode(): Text {
-        return paragraphNodes.getChildren().get(0) as Text
-    }
+    private fun getTextTranslateX():Double = contentView.snappedLeftInset()
+    private fun getTextTranslateY():Double = contentView.snappedTopInset()
+    private fun getTextLeft():Double = 0.0
+    private fun translateCaretPosition(p: Point2D): Point2D = p
+    private fun getTextNode(): Text = paragraphNodes.children[0] as Text
 
     fun getIndex(x: Double, y: Double): HitInfo {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
         val textNode: Text = getTextNode()
-        val p: Point2D = Point2D(x - textNode.getLayoutX(), y - getTextTranslateY())
+        val p: Point2D = Point2D(x - textNode.layoutX, y - getTextTranslateY())
         val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
-        val pos: Int = hit.getCharIndex()
+        val pos: Int = hit.charIndex
         if (pos > 0) {
-            val oldPos: Int = textNode.getImpl_caretPosition()
-            textNode.setImpl_caretPosition(pos)
-            val element: PathElement = textNode.getImpl_caretShape()[0]
-            if (element is MoveTo && (element as MoveTo).getY() > y - getTextTranslateY()) {
-                hit.setCharIndex(pos - 1)
+            val oldPos: Int = textNode.impl_caretPosition
+            textNode.impl_caretPosition = pos
+            val element: PathElement = textNode.impl_caretShape[0]
+            if (element is MoveTo && (element as MoveTo).y > y - getTextTranslateY()) {
+                hit.charIndex = pos - 1
             }
-            textNode.setImpl_caretPosition(oldPos)
+            textNode.impl_caretPosition = oldPos
         }
         return hit
     }
 
     override fun nextCharacterVisually(muvRajt: Boolean) {
         // mirror Text node if we're in Right-To-Left
-        val moveRight = if (isRTL()) !muvRajt else muvRajt
+        val moveRight = if (isRTL) !muvRajt else muvRajt
 
         val textNode: Text = getTextNode()
-        var caretBounds: Bounds = caretPath.getLayoutBounds()
-        if (caretPath.getElements().size == 4) {
+        var caretBounds: Bounds = caretPath.layoutBounds
+        if (caretPath.elements.size == 4) {
             // The caret is split
             // TODO: Find a better way to get the primary caret position
             // instead of depending on the internal implementation.
             // See RT-25465.
-            caretBounds = Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds()
+            caretBounds = Path(caretPath.elements[0], caretPath.elements[1]).layoutBounds
         }
-        val hitX: Double = if(moveRight) caretBounds.getMaxX() else caretBounds.getMinX()
-        val hitY: Double = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2
+        val hitX: Double = if(moveRight) caretBounds.maxX else caretBounds.minX
+        val hitY: Double = (caretBounds.minY + caretBounds.maxY) / 2
         val hit: HitInfo = textNode.impl_hitTestChar(Point2D(hitX, hitY))
-        val charShape: Path = Path(*textNode.impl_getRangeShape(hit.getCharIndex(), hit.getCharIndex() + 1))
-        if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
-                (!moveRight && charShape.getLayoutBounds().getMinX() < caretBounds.getMinX())) {
-            hit.setLeading(!hit.isLeading())
-            positionCaret(hit, false, false)
+        val charShape: Path = Path(*textNode.impl_getRangeShape(hit.charIndex, hit.charIndex + 1))
+        if ((moveRight && charShape.layoutBounds.maxX > caretBounds.maxX) ||
+                (!moveRight && charShape.layoutBounds.minX < caretBounds.minX)) {
+            hit.isLeading = !hit.isLeading
+            positionCaret(hit, select = false, extendSelection = false)
         } else {
             // We're at beginning or end of line. Try moving up / down.
-            val dot: Int = textArea.getCaretPosition()
+            val dot: Int = textArea.caretPosition
             targetCaretX = if(moveRight) 0.0 else Double.MAX_VALUE
             // TODO: Use Bidi sniffing instead of assuming right means forward here?
             downLines(if(moveRight) 1 else -1, false, false)
             targetCaretX = -1.0
-            if (dot == textArea.getCaretPosition()) {
+            if (dot == textArea.caretPosition) {
                 if (moveRight) {
                     textArea.forward()
                 } else {
@@ -950,46 +922,46 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     protected fun downLines(nLines: Int, select: Boolean, extendSelection: Boolean) {
         val textNode: Text = getTextNode()
-        val caretBounds: Bounds = caretPath.getLayoutBounds()
+        val caretBounds: Bounds = caretPath.layoutBounds
 
         // The middle y coordinate of the the line we want to go to.
-        var targetLineMidY: Double = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2 + nLines * lineHeight
+        var targetLineMidY: Double = (caretBounds.minY + caretBounds.maxY) / 2 + nLines * lineHeight
         if (targetLineMidY < 0) {
             targetLineMidY = 0.0
         }
 
         // The target x for the caret. This may have been set during a
         // previous call.
-        val x: Double = if(targetCaretX >= 0)  targetCaretX else (caretBounds.getMaxX())
+        val x: Double = if(targetCaretX >= 0)  targetCaretX else (caretBounds.maxX)
 
         // Find a text position for the target x,y.
         val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(Point2D(x, targetLineMidY)))
-        val pos: Int = hit.getCharIndex()
+        val pos: Int = hit.charIndex
 
         // Save the old pos temporarily while testing the one.
-        val oldPos: Int = textNode.getImpl_caretPosition()
-        val oldBias: Boolean = textNode.isImpl_caretBias()
-        textNode.setImpl_caretBias(hit.isLeading())
-        textNode.setImpl_caretPosition(pos)
-        tmpCaretPath.getElements().clear()
-        tmpCaretPath.getElements().addAll(textNode.getImpl_caretShape())
-        tmpCaretPath.setLayoutX(textNode.getLayoutX())
-        tmpCaretPath.setLayoutY(textNode.getLayoutY())
-        val tmpCaretBounds: Bounds = tmpCaretPath.getLayoutBounds()
+        val oldPos: Int = textNode.impl_caretPosition
+        val oldBias: Boolean = textNode.isImpl_caretBias
+        textNode.isImpl_caretBias = hit.isLeading
+        textNode.impl_caretPosition = pos
+        tmpCaretPath.elements.clear()
+        tmpCaretPath.elements.addAll(textNode.impl_caretShape)
+        tmpCaretPath.layoutX = textNode.layoutX
+        tmpCaretPath.layoutY = textNode.layoutY
+        val tmpCaretBounds: Bounds = tmpCaretPath.layoutBounds
         // The y for the middle of the row we found.
-        val foundLineMidY: Double = (tmpCaretBounds.getMinY() + tmpCaretBounds.getMaxY()) / 2
-        textNode.setImpl_caretBias(oldBias)
-        textNode.setImpl_caretPosition(oldPos)
+        val foundLineMidY: Double = (tmpCaretBounds.minY + tmpCaretBounds.maxY) / 2
+        textNode.isImpl_caretBias = oldBias
+        textNode.impl_caretPosition = oldPos
 
         if (pos > 0) {
             if (nLines > 0 && foundLineMidY > targetLineMidY) {
                 // We went too far and ended up after a newline.
-                hit.setCharIndex(pos - 1)
+                hit.charIndex = pos - 1
             }
 
-            if (pos >= textArea.getLength() && getCharacter(pos - 1) == '\n') {
+            if (pos >= textArea.length && getCharacter(pos - 1) == '\n') {
                 // Special case for newline at end of text.
-                hit.setLeading(true)
+                hit.isLeading = true
             }
         }
 
@@ -1026,9 +998,9 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
 
     fun paragraphStart(previousIfAtStart: Boolean, select: Boolean) {
-        val textArea: TextAria = getSkinnable()
-        val text: String = textArea.textProperty().getValueSafe()
-        var pos: Int = textArea.getCaretPosition()
+        val textArea: TextAria = skinnable
+        val text: String = textArea.textProperty().valueSafe
+        var pos: Int = textArea.caretPosition
 
         if (pos > 0) {
             if (previousIfAtStart && text.codePointAt(pos-1) == 0x0a) {
@@ -1049,9 +1021,9 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     fun paragraphEnd(goPastInitialNewline: Boolean, goPastTrailingNewline: Boolean, select: Boolean) {
-        val textArea: TextAria = getSkinnable()
-        val text: String = textArea.textProperty().getValueSafe()
-        var pos: Int = textArea.getCaretPosition()
+        val textArea: TextAria = skinnable
+        val text: String = textArea.textProperty().valueSafe
+        var pos: Int = textArea.caretPosition
         val len: Int = text.length
         var wentPastInitialNewline: Boolean = false
 
@@ -1083,19 +1055,19 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     private fun updateTextNodeCaretPos(pos: Int) {
         val textNode: Text = getTextNode()
-        if (isForwardBias()) {
-            textNode.setImpl_caretPosition(pos)
+        if (isForwardBias) {
+            textNode.impl_caretPosition = pos
         } else {
-            textNode.setImpl_caretPosition(pos - 1)
+            textNode.impl_caretPosition = pos - 1
         }
-        textNode.impl_caretBiasProperty().set(isForwardBias())
+        textNode.impl_caretBiasProperty().set(isForwardBias)
     }
 
     override protected fun getUnderlineShape(start: Int, end: Int):Array<PathElement>? {
         var pStart: Int = 0
-        for (node: Node in paragraphNodes.getChildren()) {
+        for (node: Node in paragraphNodes.children) {
             val p: Text = node as Text
-            val pEnd: Int = pStart + p.textProperty().getValueSafe().length
+            val pEnd: Int = pStart + p.textProperty().valueSafe.length
             if (pEnd >= start) {
                 return p.impl_getUnderlineShape(start - pStart, end - pStart)
             }
@@ -1106,9 +1078,9 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     override protected fun getRangeShape(start: Int, end: Int):Array<PathElement>? {
         var pStart: Int = 0
-        for (node: Node in paragraphNodes.getChildren()) {
+        for (node: Node in paragraphNodes.children) {
             val p: Text = node as Text
-            val pEnd: Int = pStart + p.textProperty().getValueSafe().length
+            val pEnd: Int = pStart + p.textProperty().valueSafe.length
             if (pEnd >= start) {
                 return p.impl_getRangeShape(start - pStart, end - pStart)
             }
@@ -1120,9 +1092,9 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     override protected fun addHighlight(nodes:List<Node>, start: Int) {
         var pStart: Int = 0
         var paragraphNode: Text? = null
-        for (node: Node in paragraphNodes.getChildren()) {
+        for (node: Node in paragraphNodes.children) {
             val p: Text = node as Text
-            val pEnd: Int = pStart + p.textProperty().getValueSafe().length
+            val pEnd: Int = pStart + p.textProperty().valueSafe.length
             if (pEnd >= start) {
                 paragraphNode = p
                 break
@@ -1132,15 +1104,15 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
         if (paragraphNode != null) {
             for (node: Node in nodes) {
-                node.setLayoutX(paragraphNode.getLayoutX())
-                node.setLayoutY(paragraphNode.getLayoutY())
+                node.layoutX = paragraphNode.layoutX
+                node.layoutY = paragraphNode.layoutY
             }
         }
-        contentView.getChildren().addAll(nodes)
+        contentView.children.addAll(nodes)
     }
 
     override protected fun removeHighlight(nodes:List<Node> ) {
-        contentView.getChildren().removeAll(nodes)
+        contentView.children.removeAll(nodes)
     }
 
     /**
@@ -1152,9 +1124,9 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 //        final double textMaxXOld = textNode.getBoundsInParent().getMaxX();
 //        final double caretMaxXOld = caretPath.getLayoutBounds().getMaxX() + textTranslateX.get();
         val shouldBeep: Boolean = if(previous) {
-            !getSkinnable().deletePreviousChar()
+            !skinnable.deletePreviousChar()
         } else{
-            !getSkinnable().deleteNextChar()
+            !skinnable.deleteNextChar()
         }
 
         if (shouldBeep) {
@@ -1168,14 +1140,14 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         contentView.layoutChildren()
         var p: Point2D = super.getMenuPosition()
         if (p != null) {
-            p = Point2D(Math.max(0.0, p.getX() - contentView.snappedLeftInset() - getSkinnable().getScrollLeft()),
-                    Math.max(0.0, p.getY() - contentView.snappedTopInset() - getSkinnable().getScrollTop()))
+            p = Point2D(Math.max(0.0, p.x - contentView.snappedLeftInset() - skinnable.scrollLeft),
+                    Math.max(0.0, p.y - contentView.snappedTopInset() - skinnable.scrollTop))
         }
         return p
     }
 
     fun getCaretBounds(): Bounds {
-        return getSkinnable().sceneToLocal(caretPath.localToScene(caretPath.getBoundsInLocal()))
+        return skinnable.sceneToLocal(caretPath.localToScene(caretPath.boundsInLocal))
     }
 
     override protected fun queryAccessibleAttribute(attribute: AccessibleAttribute, vararg parameters:Any): Any {
