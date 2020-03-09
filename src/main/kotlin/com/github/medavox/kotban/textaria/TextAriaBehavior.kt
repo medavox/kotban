@@ -30,7 +30,7 @@ class TextAriaBehavior(textArea:TextAria) : TextInputControlBehavior<TextAria>(t
     /**************************************************************************
      *                          Setup KeyBindings                             *
      *************************************************************************/
-    private val skin:TextAriaSkin = textArea.ariaSkin
+
     companion object {
         private val TEXT_AREA_BINDINGS = mutableListOf<KeyBinding>().apply {
             add(KeyBinding(HOME, KEY_PRESSED, "LineStart")) // changed
@@ -99,7 +99,7 @@ class TextAriaBehavior(textArea:TextAria) : TextInputControlBehavior<TextAria>(t
         }
     }
 
-
+    var skin:TextAriaSkin = textArea.ariaSkin
     private val contextMenu:ContextMenu = ContextMenu()
     private var tlFocus:TwoLevelFocusBehavior? = null
 

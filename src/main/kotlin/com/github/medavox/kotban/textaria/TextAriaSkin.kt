@@ -87,6 +87,10 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     private /*static*/ val tmpCaretPath: Path = Path()
 
     init {
+        behavior.skin = this//sadly needed AFAICS, to prevent null pointer exceptions.
+        //the source of the problem is the design of the super classes:
+        // TextInputControl -Skin and -Behavior need references to instances of each other
+        //but that is JavaFX 8 code, so nothing can be done without importing & forking even more of it
         caretPosition.addListener { _, oldValue, newValue ->
             targetCaretX = -1.0
             if (newValue.toInt() > oldValue.toInt()) {
