@@ -291,7 +291,7 @@ class Kotban : Application() {
         content = TextAria(note.contents).also { textArea ->
             textArea.isEditable=false
             textArea.isWrapText = true
-            textArea.prefHeightProperty().bind(textArea.doubleBinding)
+            textArea.prefHeightProperty().bind(textArea.displayTimeHeight)
             textArea.font = Font.font("monospace")
         }
         contextMenu = ContextMenu(

@@ -51,7 +51,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     private var characterWidth: Double = 0.0
     private var lineHeight: Double = 0.0
     private var contentView: ContentView = ContentView()
-    var doubleBinding: DoubleProperty = contentView.hajt
+    val displayTimeHeight: DoubleProperty = contentView.hajt
     private var paragraphNodes: Group = Group()
 
     private var promptNode: Text? = null
@@ -65,11 +65,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
     private var selectionHighlightGroup: Group = Group()
 
-    private var scrollDirection: VerticalDirection? = null
-
     private var characterBoundingPath: Path = Path()
-
-    private var scrollSelectionTimeline: Timeline = Timeline()
 
     // For dragging handles on embedded
     private var pressX: Double = 0.0
@@ -90,31 +86,17 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     /** A shared helper object, used only by downLines(). */
     private /*static*/ val tmpCaretPath: Path = Path()
 
-    private val scrollSelectionHandler:EventHandler<ActionEvent> = EventHandler<ActionEvent>{ event ->
-/*        switch (scrollDirection) {
-            case UP: {
-                // TODO Get previous offset
-                break
-            }
-
-            case DOWN: {
-                // TODO Get next offset
-                break
-            }
-        }*/
-    }
-
     init {
         caretPosition.addListener { _, oldValue, newValue ->
             targetCaretX = -1.0
             if (newValue.toInt() > oldValue.toInt()) {
-                setForwardBias(true)
+                isForwardBias = true
             }
         }
 
-        forwardBiasProperty().addListener { observable ->
-            if (textArea.getWidth() > 0) {
-                updateTextNodeCaretPos(textArea.getCaretPosition())
+        forwardBiasProperty().addListener { _ ->
+            if (textArea.width > 0) {
+                updateTextNodeCaretPos(textArea.caretPosition)
             }
         }
 
@@ -154,12 +136,6 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         if (SHOW_HANDLES) {
             contentView.children.addAll(caretHandle, selectionHandle1, selectionHandle2)
         }
-
-        // Initialize the scroll selection timeline
-        scrollSelectionTimeline.cycleCount = Timeline.INDEFINITE
-        val scrollSelectionFrames:MutableList<KeyFrame> = scrollSelectionTimeline.keyFrames
-        scrollSelectionFrames.clear()
-        scrollSelectionFrames.add(KeyFrame(Duration.millis(350.0), scrollSelectionHandler))
 
         // Add initial text content
         val paragraph: CharSequence = textArea.textProperty().valueSafe
@@ -252,13 +228,13 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                 val tp: Point2D = textNode.localToScene(0.0, 0.0)
                 val p = Point2D(e.sceneX - tp.x + 10/*??*/ - pressX + caretHandle.width / 2,
                     e.sceneY - tp.y - pressY - 6)
-                val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
+                val hit: HitInfo = textNode.impl_hitTestChar(p)
                 val pos: Int = hit.charIndex
                 if (pos > 0) {
                     val oldPos: Int = textNode.impl_caretPosition
                     textNode.impl_caretPosition = pos
                     val element: PathElement = textNode.impl_caretShape[0]
-                    if (element is MoveTo && (element as MoveTo).y > e.y - getTextTranslateY()) {
+                    if (element is MoveTo && (element as MoveTo).y > e.y - contentView.snappedTopInset()) {
                         hit.charIndex = pos - 1
                     }
                     textNode.impl_caretPosition = oldPos
@@ -273,7 +249,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                 val tp: Point2D = textNode.localToScene(0.0, 0.0)
                 val p = Point2D(e.sceneX - tp.x + 10/*??*/ - pressX + selectionHandle1.width / 2,
                     e.sceneY - tp.y - pressY + selectionHandle1.height + 5)
-                val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
+                val hit: HitInfo = textNode.impl_hitTestChar(p)
                 var pos: Int = hit.charIndex
                 if (textArea.anchor < textArea.caretPosition) {
                     // Swap caret and anchor
@@ -286,7 +262,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                     val oldPos: Int = textNode.impl_caretPosition
                     textNode.impl_caretPosition = pos
                     val element: PathElement = textNode.impl_caretShape[0]
-                    if (element is MoveTo && element.y > e.y - getTextTranslateY()) {
+                    if (element is MoveTo && element.y > e.y - contentView.snappedTopInset()) {
                         hit.charIndex = pos - 1
                     }
                     textNode.impl_caretPosition = oldPos
@@ -301,7 +277,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                 val tp: Point2D = textNode.localToScene(0.0, 0.0)
                 val p = Point2D(e.sceneX - tp.x + 10/*??*/ - pressX + selectionHandle2.width / 2,
                     e.sceneY - tp.y - pressY - 6)
-                val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
+                val hit: HitInfo = textNode.impl_hitTestChar(p)
                 var pos: Int = hit.charIndex
                 if (textArea.anchor > textArea.caretPosition) {
                     // Swap caret and anchor
@@ -314,7 +290,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                     val oldPos: Int = textNode.impl_caretPosition
                     textNode.impl_caretPosition = pos
                     val element: PathElement = textNode.impl_caretShape[0]
-                    if (element is MoveTo && element.y > e.y - getTextTranslateY()) {
+                    if (element is MoveTo && element.y > e.y - contentView.snappedTopInset()) {
                         hit.charIndex = pos - 1
                     }
                     textNode.impl_caretPosition = oldPos
@@ -324,8 +300,6 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             }
         }
     }
-
-
 
     override protected fun invalidateMetrics() {
         computedMinWidth = Double.NEGATIVE_INFINITY
@@ -382,7 +356,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                     Math.max(width - (snappedLeftInset() + snappedRightInset()), 0.0)
                 }
 
-                var prefHeight: Double = 0.0
+                var prefHeight = 0.0
 
                 for (node: Node in paragraphNodes.children) {
                     val paragraphNode: Text = node as Text
@@ -857,24 +831,20 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     // Callbacks from Behavior class
 
-    private fun getTextTranslateX():Double = contentView.snappedLeftInset()
-    private fun getTextTranslateY():Double = contentView.snappedTopInset()
-    private fun getTextLeft():Double = 0.0
-    private fun translateCaretPosition(p: Point2D): Point2D = p
     private fun getTextNode(): Text = paragraphNodes.children[0] as Text
 
     fun getIndex(x: Double, y: Double): HitInfo {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
         val textNode: Text = getTextNode()
-        val p: Point2D = Point2D(x - textNode.layoutX, y - getTextTranslateY())
-        val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(p))
+        val p: Point2D = Point2D(x - textNode.layoutX, y - contentView.snappedTopInset())
+        val hit: HitInfo = textNode.impl_hitTestChar(p)
         val pos: Int = hit.charIndex
         if (pos > 0) {
             val oldPos: Int = textNode.impl_caretPosition
             textNode.impl_caretPosition = pos
             val element: PathElement = textNode.impl_caretShape[0]
-            if (element is MoveTo && (element as MoveTo).y > y - getTextTranslateY()) {
+            if (element is MoveTo && (element as MoveTo).y > y - contentView.snappedTopInset()) {
                 hit.charIndex = pos - 1
             }
             textNode.impl_caretPosition = oldPos
@@ -935,7 +905,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         val x: Double = if(targetCaretX >= 0)  targetCaretX else (caretBounds.maxX)
 
         // Find a text position for the target x,y.
-        val hit: HitInfo = textNode.impl_hitTestChar(translateCaretPosition(Point2D(x, targetLineMidY)))
+        val hit: HitInfo = textNode.impl_hitTestChar(Point2D(x, targetLineMidY))
         val pos: Int = hit.charIndex
 
         // Save the old pos temporarily while testing the one.
@@ -1123,16 +1093,10 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     fun deleteChar(previous: Boolean) {
 //        final double textMaxXOld = textNode.getBoundsInParent().getMaxX();
 //        final double caretMaxXOld = caretPath.getLayoutBounds().getMaxX() + textTranslateX.get();
-        val shouldBeep: Boolean = if(previous) {
+        if(previous) {
             !skinnable.deletePreviousChar()
         } else{
             !skinnable.deleteNextChar()
-        }
-
-        if (shouldBeep) {
-//            beep();
-        } else {
-//            scrollAfterDelete(textMaxXOld, caretMaxXOld);
         }
     }
 
@@ -1144,10 +1108,6 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                     Math.max(0.0, p.y - contentView.snappedTopInset() - skinnable.scrollTop))
         }
         return p
-    }
-
-    fun getCaretBounds(): Bounds {
-        return skinnable.sceneToLocal(caretPath.localToScene(caretPath.boundsInLocal))
     }
 
     override protected fun queryAccessibleAttribute(attribute: AccessibleAttribute, vararg parameters:Any): Any {

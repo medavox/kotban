@@ -10,5 +10,9 @@ class TextAria(text:String) : TextArea(text) {
         return ariaSkin
     }
 
-    val doubleBinding: DoubleProperty = ariaSkin.doubleBinding
+    val displayTimeHeight: DoubleProperty = ariaSkin.displayTimeHeight
+
+    override fun toString(): String {
+        return super<TextArea>.toString()+ "skin: $ariaSkin"
+    }
 }
