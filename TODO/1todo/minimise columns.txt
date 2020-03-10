@@ -1,1 +1,1 @@
-a way to minimise a column (hide it like notes can be hidden)
+a way to minimise a column (hide/collapse it like notes can be hidden)
