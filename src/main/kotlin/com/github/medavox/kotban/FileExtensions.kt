@@ -11,7 +11,7 @@ import java.net.URI
  */
 const val RESIZE_MARGIN = 10
 
-val PLAIN_TEXT_FILE_EXTENSIONS = arrayOf("txt", "md", "cfg", "ini", "config", "textile", "rst", "asc")
+val PLAIN_TEXT_FILE_EXTENSIONS = arrayOf("txt", "md", "markdown", "cfg", "ini", "config", "textile", "rst", "asc")
 
 fun File.isValidFile():Boolean {
     return isFile && canRead() && exists() &&
