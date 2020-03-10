@@ -8,34 +8,34 @@ package com.github.medavox.kotban.textaria
 import com.sun.javafx.scene.control.skin.TextInputControlSkin
 
 
-import com.sun.javafx.scene.text.HitInfo
-import javafx.animation.KeyFrame
-import javafx.animation.Timeline
-import javafx.application.Platform
-import javafx.beans.binding.BooleanBinding
-import javafx.beans.binding.DoubleBinding
-import javafx.beans.binding.IntegerBinding
-import javafx.beans.property.DoubleProperty
-import javafx.beans.property.DoublePropertyBase
-import javafx.beans.value.ObservableBooleanValue
-import javafx.beans.value.ObservableIntegerValue
-import javafx.collections.ListChangeListener
-import javafx.collections.ObservableList
-import javafx.event.ActionEvent
-import javafx.event.EventHandler
-import javafx.geometry.*
-import javafx.scene.AccessibleAttribute
-import javafx.scene.Group
-import javafx.scene.Node
-import javafx.scene.control.IndexRange
-import javafx.scene.input.MouseEvent
-import javafx.scene.input.ScrollEvent
-import javafx.scene.layout.Region
-import javafx.scene.shape.MoveTo
-import javafx.scene.shape.Path
-import javafx.scene.shape.PathElement
-import javafx.scene.text.Text
-import javafx.util.Duration
+import com.sun.javafx.scene.text.HitInfo;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.DoubleBinding;
+import javafx.beans.binding.IntegerBinding;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
+import javafx.beans.value.ObservableBooleanValue;
+import javafx.beans.value.ObservableIntegerValue;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.geometry.*;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.Group;
+import javafx.scene.Node;
+import javafx.scene.control.IndexRange;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.Region;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
+import javafx.scene.text.Text;
+import javafx.util.Duration;
 
 /**
  * A fork of JavaFX 8's Text area skin. Its internal scrollPane (and corresponding functionality) has been removed,
@@ -114,16 +114,16 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         }
 
         // Add selection
-        selectionHighlightGroup.isManaged = false
-        selectionHighlightGroup.isVisible = false
-        contentView.children.add(selectionHighlightGroup)
+        selectionHighlightGroup.setManaged(false);
+        selectionHighlightGroup.setVisible(false);
+        contentView.getChildren().add(selectionHighlightGroup);
 
         // Add content view
-        paragraphNodes.isManaged = false
-        contentView.children.add(paragraphNodes)
+        paragraphNodes.setManaged(false);
+        contentView.getChildren().add(paragraphNodes);
 
         // Add caret
-        caretPath.isManaged = false
+        caretPath.setManaged(false);
         caretPath.strokeWidth = 1.0
         caretPath.fillProperty().bind(textFill)
         caretPath.strokeProperty().bind(textFill)
@@ -135,10 +135,10 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                 return if(caretVisible.get()) 1.0 else 0.0
             }
         })
-        contentView.children.add(caretPath)
+        contentView.getChildren().add(caretPath);
 
         if (SHOW_HANDLES) {
-            contentView.children.addAll(caretHandle, selectionHandle1, selectionHandle2)
+            contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
         }
 
         // Add initial text content
@@ -147,32 +147,32 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
         textArea.selectionProperty().addListener { _, _, _ ->
             // TODO Why do we need two calls here?
-            textArea.requestLayout()
-            contentView.requestLayout()
+            textArea.requestLayout();
+            contentView.requestLayout();
         }
 
         textArea.wrapTextProperty().addListener { _, _, _ ->
-            invalidateMetrics()
+            invalidateMetrics();
         }
 
         textArea.prefColumnCountProperty().addListener { _, _, _ ->
-            invalidateMetrics()
-            updatePrefViewportWidth()
+            invalidateMetrics();
+            updatePrefViewportWidth();
         }
 
         textArea.prefRowCountProperty().addListener { _, _, _ ->
-            invalidateMetrics()
-            updatePrefViewportHeight()
+            invalidateMetrics();
+            updatePrefViewportHeight();
         }
 
         updateFontMetrics()
         fontMetrics.addListener{ _ ->
-            updateFontMetrics()
+            updateFontMetrics();
         }
 
         contentView.paddingProperty().addListener { _ ->
-            updatePrefViewportWidth()
-            updatePrefViewportHeight()
+            updatePrefViewportWidth();
+            updatePrefViewportHeight();
         }
 
         textArea.textProperty().addListener { _ ->
@@ -192,40 +192,40 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         }
 
         if (usePromptText.get()) {
-            createPromptNode()
+            createPromptNode();
         }
 
         usePromptText.addListener { _ ->
-            createPromptNode()
-            textArea.requestLayout()
+            createPromptNode();
+            textArea.requestLayout();
         }
 
-        updateHighlightFill()
-        updatePrefViewportWidth()
-        updatePrefViewportHeight()
-        if (textArea.isFocused) setCaretAnimating(true)
+        updateHighlightFill();
+        updatePrefViewportWidth();
+        updatePrefViewportHeight();
+        if (textArea.isFocused()) setCaretAnimating(true);
 
         if (SHOW_HANDLES) {
             selectionHandle1.rotate = 180.0
 
             val handlePressHandler:EventHandler<MouseEvent> =  EventHandler<MouseEvent>{e ->
-                pressX = e.x
-                pressY = e.y
-                handlePressed = true
-                e.consume()
+                pressX = e.getX();
+                pressY = e.getY();
+                handlePressed = true;
+                e.consume();
             }
 
             val handleReleaseHandler:EventHandler<MouseEvent> =  EventHandler<MouseEvent>{event ->
-                handlePressed = false
+                handlePressed = false;
             }
 
-            caretHandle.onMousePressed = handlePressHandler
-            selectionHandle1.onMousePressed = handlePressHandler
-            selectionHandle2.onMousePressed = handlePressHandler
+            caretHandle.setOnMousePressed(handlePressHandler);
+            selectionHandle1.setOnMousePressed(handlePressHandler);
+            selectionHandle2.setOnMousePressed(handlePressHandler);
 
-            caretHandle.onMouseReleased = handleReleaseHandler
-            selectionHandle1.onMouseReleased = handleReleaseHandler
-            selectionHandle2.onMouseReleased = handleReleaseHandler
+            caretHandle.setOnMouseReleased(handleReleaseHandler);
+            selectionHandle1.setOnMouseReleased(handleReleaseHandler);
+            selectionHandle2.setOnMouseReleased(handleReleaseHandler);
 
             caretHandle.setOnMouseDragged {e ->
                 val textNode: Text = getTextNode()
@@ -244,7 +244,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                     textNode.impl_caretPosition = oldPos
                 }
                 positionCaret(hit, select = false, extendSelection = false)
-                e.consume()
+                e.consume();
             }
 
             selectionHandle1.setOnMouseDragged { e ->
@@ -260,8 +260,8 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                     textArea.selectRange(textArea.caretPosition, textArea.anchor)
                 }
                 if (pos > 0) {
-                    if (pos >= textArea.anchor) {
-                        pos = textArea.anchor
+                    if (pos >= textArea.getAnchor()) {
+                        pos = textArea.getAnchor();
                     }
                     val oldPos: Int = textNode.impl_caretPosition
                     textNode.impl_caretPosition = pos
@@ -306,19 +306,19 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     }
 
     override protected fun invalidateMetrics() {
-        computedMinWidth = Double.NEGATIVE_INFINITY
-        computedMinHeight = Double.NEGATIVE_INFINITY
-        computedPrefWidth = Double.NEGATIVE_INFINITY
-        computedPrefHeight = Double.NEGATIVE_INFINITY
+        computedMinWidth = Double.NEGATIVE_INFINITY;
+        computedMinHeight = Double.NEGATIVE_INFINITY;
+        computedPrefWidth = Double.NEGATIVE_INFINITY;
+        computedPrefHeight = Double.NEGATIVE_INFINITY;
     }
 
     private inner class ContentView : Region() {
         init{
-            styleClass.add("content")
+            getStyleClass().add("content");
 
             val eventHandler:((MouseEvent) -> Unit) = { event ->
-                behavior.mousePressed(event)
-                event.consume()
+                getBehavior().mousePressed(event);
+                event.consume();
             }
 
             addEventHandler(MouseEvent.MOUSE_PRESSED, eventHandler)
@@ -413,7 +413,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             var y: Double = topPadding
             //System.out.println("HERE  snappedTopInset: "+y);
 
-            val paragraphNodesChildren:List<Node> = paragraphNodes.children
+            val paragraphNodesChildren: List<Node> = paragraphNodes.children
 
             for (i in paragraphNodesChildren.indices) {
                 val node: Node = paragraphNodesChildren[i]
@@ -429,7 +429,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             //notify as a property from here
             //System.out.println("HERE  contentView 'y': "+y);
             //System.out.println("HERE  textArea.prefHeight BEFORE: "+textArea.getPrefHeight());
-            hajt.set(y)
+            hajt.set(y);
 
             promptNode?.let {
                 it.layoutX = leftPadding
@@ -439,23 +439,31 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
             // Update the selection
             val selection: IndexRange = textArea.selection
+            println("selection: $selection")
             val oldCaretBounds: Bounds? = caretPath.boundsInParent
 
-            selectionHighlightGroup.children.clear()
+            selectionHighlightGroup.getChildren().clear();
 
             val caretPos: Int = textArea.caretPosition
             val anchorPos: Int = textArea.anchor
+            println("caretPs: $caretPos; anchorPos: $anchorPos")
 
             if (SHOW_HANDLES) {
                 // Install and resize the handles for caret and anchor.
-                if (selection.length > 0) {
-                    selectionHandle1.resize(selectionHandle1.prefWidth(-1.0),
-                            selectionHandle1.prefHeight(-1.0))
-                    selectionHandle2.resize(selectionHandle2.prefWidth(-1.0),
-                            selectionHandle2.prefHeight(-1.0))
+                if (selection.getLength() > 0) {
+                    selectionHandle1.resize(
+                        selectionHandle1.prefWidth(-1.0),
+                        selectionHandle1.prefHeight(-1.0)
+                    );
+                    selectionHandle2.resize(
+                        selectionHandle2.prefWidth(-1.0),
+                        selectionHandle2.prefHeight(-1.0)
+                    );
                 } else {
-                    caretHandle.resize(caretHandle.prefWidth(-1.0),
-                            caretHandle.prefHeight(-1.0))
+                    caretHandle.resize(
+                        caretHandle.prefWidth(-1.0),
+                        caretHandle.prefHeight(-1.0)
+                    )
                 }
 
                 // Position the handle for the anchor. This could be handle1 or handle2.
@@ -485,32 +493,32 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                     }
                 }
             }
+            if(true){
+                // Position caret
+                var paragraphIndex: Int = paragraphNodesChildren.size
+                var paragraphOffset: Int = textArea.length + 1
 
-            // Position caret
-            var paragraphIndex: Int = paragraphNodesChildren.size
-            var paragraphOffset: Int = textArea.length + 1
+                var paragraphNode: Text
+                do {
+                    paragraphNode = paragraphNodesChildren[--paragraphIndex] as Text
+                    paragraphOffset -= paragraphNode.text.length + 1
+                } while (caretPos < paragraphOffset)
 
-            var paragraphNode: Text
-            do {
-                paragraphNode = paragraphNodesChildren[--paragraphIndex] as Text
-                paragraphOffset -= paragraphNode.text.length + 1
-            } while (caretPos < paragraphOffset)
+                updateTextNodeCaretPos(caretPos - paragraphOffset)
 
-            updateTextNodeCaretPos(caretPos - paragraphOffset)
+                caretPath.elements.clear()
+                caretPath.elements.addAll(paragraphNode.impl_caretShape)
 
-            caretPath.elements.clear()
-            caretPath.elements.addAll(paragraphNode.impl_caretShape)
+                caretPath.layoutX = paragraphNode.layoutX
 
-            caretPath.layoutX = paragraphNode.layoutX
+                // TODO: Remove this temporary workaround for RT-27533
+                paragraphNode.layoutX = 2 * paragraphNode.layoutX - paragraphNode.boundsInParent.minX
 
-            // TODO: Remove this temporary workaround for RT-27533
-            paragraphNode.layoutX = 2 * paragraphNode.layoutX - paragraphNode.boundsInParent.minX
-
-            caretPath.layoutY = paragraphNode.layoutY
-            if (oldCaretBounds == null || oldCaretBounds != caretPath.boundsInParent) {
-                scrollCaretToVisible()
+                caretPath.layoutY = paragraphNode.layoutY
+                if (oldCaretBounds == null || oldCaretBounds != caretPath.boundsInParent) {
+                    scrollCaretToVisible()
+                }
             }
-
             // Update selection fg and bg
             var start: Int = selection.start
             var end: Int = selection.end
@@ -518,36 +526,39 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                 val paragraphNode: Node = paragraphNodesChildren[i]
                 val textNode: Text = paragraphNode as Text
                 val paragraphLength: Int = textNode.text.length + 1
+                println("inside the for-loop. end: $end; start: $start; paragraphLength: $paragraphLength")
                 if (end > start && start < paragraphLength) {
+                    println("inside the if-statement")
                     textNode.impl_selectionStart = start
                     textNode.impl_selectionEnd = Math.min(end, paragraphLength)
 
                     val selectionHighlightPath: Path = Path()
-                    selectionHighlightPath.isManaged = false
-                    selectionHighlightPath.stroke = null
+                    selectionHighlightPath.setManaged(false);
+                    selectionHighlightPath.setStroke(null);
                     val selectionShape: Array<PathElement>? = textNode.impl_selectionShape
                     if (selectionShape != null) {
-                        selectionHighlightPath.elements.addAll(selectionShape)
+                        selectionHighlightPath.getElements().addAll(selectionShape);
                     }
-                    selectionHighlightGroup.children.add(selectionHighlightPath)
-                    selectionHighlightGroup.isVisible = true
-                    selectionHighlightPath.layoutX = textNode.layoutX
-                    selectionHighlightPath.layoutY = textNode.layoutY
-                    updateHighlightFill()
+                    selectionHighlightGroup.getChildren().add(selectionHighlightPath);
+                    println("mekkin it visibl")
+                    selectionHighlightGroup.setVisible(true);
+                    selectionHighlightPath.setLayoutX(textNode.getLayoutX());
+                    selectionHighlightPath.setLayoutY(textNode.getLayoutY());
+                    updateHighlightFill();
                 } else {
                     textNode.impl_selectionStart = -1
                     textNode.impl_selectionEnd = -1
                     selectionHighlightGroup.isVisible = false
                 }
-                start = Math.max(0, start - paragraphLength)
-                end   = Math.max(0, end   - paragraphLength)
+                start = Math.max(0, start - paragraphLength);
+                end   = Math.max(0, end   - paragraphLength);
             }
 
             if (SHOW_HANDLES) {
                 // Position handle for the caret. This could be handle1 or handle2 when
                 // a selection is active.
                 val b: Bounds = caretPath.boundsInParent
-                if (selection.length > 0) {
+                if (selection.getLength() > 0) {
                     if (caretPos < anchorPos) {
                         selectionHandle1.layoutX = b.minX - selectionHandle1.width / 2
                         selectionHandle1.layoutY = b.minY - selectionHandle1.height + 1
@@ -608,14 +619,14 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         paragraphNode.isManaged = false
         paragraphNode.styleClass.add("text")
         paragraphNode.boundsTypeProperty().addListener { _, _, _ ->
-            invalidateMetrics()
-            updateFontMetrics()
+            invalidateMetrics();
+            updateFontMetrics();
         }
-        paragraphNodes.children.add(i, paragraphNode)
+        paragraphNodes.children.add(i, paragraphNode);
 
-        paragraphNode.fontProperty().bind(textArea.fontProperty())
-        paragraphNode.fillProperty().bind(textFill)
-        paragraphNode.impl_selectionFillProperty().bind(highlightTextFill)
+        paragraphNode.fontProperty().bind(textArea.fontProperty());
+        paragraphNode.fillProperty().bind(textFill);
+        paragraphNode.impl_selectionFillProperty().bind(highlightTextFill);
     }
 
     override fun dispose() {
@@ -783,8 +794,8 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         var h: Double = bounds.height
 
         if (SHOW_HANDLES) {
-            if (caretHandle.isVisible) {
-                h += caretHandle.height
+            if (caretHandle.isVisible()) {
+                h += caretHandle.getHeight();
             } else if (selectionHandle1.isVisible && selectionHandle2.isVisible) {
                 x -= selectionHandle1.width / 2
                 y -= selectionHandle1.height
@@ -853,7 +864,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             }
             textNode.impl_caretPosition = oldPos
         }
-        return hit
+        return hit;
     }
 
     override fun nextCharacterVisually(muvRajt: Boolean) {
@@ -884,11 +895,11 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             // TODO: Use Bidi sniffing instead of assuming right means forward here?
             downLines(if(moveRight) 1 else -1, false, false)
             targetCaretX = -1.0
-            if (dot == textArea.caretPosition) {
+            if (dot == textArea.getCaretPosition()) {
                 if (moveRight) {
-                    textArea.forward()
+                    textArea.forward();
                 } else {
-                    textArea.backward()
+                    textArea.backward();
                 }
             }
         }
@@ -915,27 +926,27 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         // Save the old pos temporarily while testing the one.
         val oldPos: Int = textNode.impl_caretPosition
         val oldBias: Boolean = textNode.isImpl_caretBias
-        textNode.isImpl_caretBias = hit.isLeading
-        textNode.impl_caretPosition = pos
-        tmpCaretPath.elements.clear()
-        tmpCaretPath.elements.addAll(textNode.impl_caretShape)
-        tmpCaretPath.layoutX = textNode.layoutX
-        tmpCaretPath.layoutY = textNode.layoutY
+        textNode.setImpl_caretBias(hit.isLeading());
+        textNode.setImpl_caretPosition(pos);
+        tmpCaretPath.getElements().clear();
+        tmpCaretPath.getElements().addAll(textNode.getImpl_caretShape());
+        tmpCaretPath.setLayoutX(textNode.getLayoutX());
+        tmpCaretPath.setLayoutY(textNode.getLayoutY());
         val tmpCaretBounds: Bounds = tmpCaretPath.layoutBounds
         // The y for the middle of the row we found.
         val foundLineMidY: Double = (tmpCaretBounds.minY + tmpCaretBounds.maxY) / 2
-        textNode.isImpl_caretBias = oldBias
-        textNode.impl_caretPosition = oldPos
+        textNode.setImpl_caretBias(oldBias);
+        textNode.setImpl_caretPosition(oldPos);
 
         if (pos > 0) {
             if (nLines > 0 && foundLineMidY > targetLineMidY) {
                 // We went too far and ended up after a newline.
-                hit.charIndex = pos - 1
+                hit.setCharIndex(pos - 1);
             }
 
-            if (pos >= textArea.length && getCharacter(pos - 1) == '\n') {
+            if (pos >= textArea.getLength() && getCharacter(pos - 1) == '\n') {
                 // Special case for newline at end of text.
-                hit.isLeading = true
+                hit.setLeading(true);
             }
         }
 
@@ -1005,24 +1016,24 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
             if (goPastInitialNewline && text.codePointAt(pos) == 0x0a) {
                 // We are at the end of a paragraph, start by moving to the
                 // next paragraph.
-                pos++
-                wentPastInitialNewline = true
+                pos++;
+                wentPastInitialNewline = true;
             }
             if (!(goPastTrailingNewline && wentPastInitialNewline)) {
                 // Go to the end of this paragraph
                 while (pos < len && text.codePointAt(pos) != 0x0a) {
-                    pos++
+                    pos++;
                 }
                 if (goPastTrailingNewline && pos < len) {
                     // We are at the end of a paragraph, finish by moving to
                     // the beginning of the next paragraph (Windows behavior).
-                    pos++
+                    pos++;
                 }
             }
             if (select) {
-                textArea.selectPositionCaret(pos)
+                textArea.selectPositionCaret(pos);
             } else {
-                textArea.positionCaret(pos)
+                textArea.positionCaret(pos);
             }
         }
     }
