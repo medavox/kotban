@@ -1,0 +1,6 @@
+Use icons for button labels where possible. 
+
+This gives 2 benefits:
+
+* reduces space taken up by the button, as the icon should be smaller than a text label
+* reduces number of strings to translate, if I ever get around to localisation (I intend to)
