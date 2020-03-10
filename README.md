@@ -56,6 +56,11 @@ files can be plain text or markdown; no syntax highlighting or preview is suppor
 
 [recognised plaintext file extensions](src/main/kotlin/com/github/medavox/kotban/FileExtensions.kt) are `txt`, `md`, `markdown`, `cfg`, `ini`, `config`, `textile`, `rst`, `asc`.
 
+Other files are ignored, which allows you smoe flexibility in storing supporting files with the tasks.
+
+Files in the same directory as the column directories are also ignored; 
+you can provide a board README here (for your own documentation purposes) if you want.
+
 Creation, deletion, moving and renaming of cards and columns can be done in the app,
 but you must open text files in your own text editor to actually edit them (There is a context menu item for this).
 
