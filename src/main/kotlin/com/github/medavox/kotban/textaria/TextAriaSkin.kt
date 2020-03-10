@@ -316,14 +316,20 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         init{
             getStyleClass().add("content");
 
-            val eventHandler:((MouseEvent) -> Unit) = { event ->
-                getBehavior().mousePressed(event);
-                event.consume();
+            addEventHandler(MouseEvent.MOUSE_PRESSED) { event ->
+                behavior.mousePressed(event)
+                event.consume()
             }
 
-            addEventHandler(MouseEvent.MOUSE_PRESSED, eventHandler)
-            addEventHandler(MouseEvent.MOUSE_RELEASED, eventHandler)
-            addEventHandler(MouseEvent.MOUSE_DRAGGED, eventHandler)
+            addEventHandler(MouseEvent.MOUSE_RELEASED) { event ->
+                behavior.mouseReleased(event)
+                event.consume()
+            }
+
+            addEventHandler(MouseEvent.MOUSE_DRAGGED) { event ->
+                behavior.mouseDragged(event)
+                event.consume()
+            }
         }
 
         override fun getContentBias(): Orientation {
