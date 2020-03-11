@@ -1,0 +1,4 @@
+Since we already load each note in a collapsed form,
+Why not see if performance can be improved by only loading the note's content when it's expanded.
+We'd still have to load the file names from the directory listing.
+But it might improve responsiveness.
