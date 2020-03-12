@@ -42,6 +42,7 @@ import javafx.util.Duration;
  * and a public Property for its actual display-time added, for computing its correct height
  * (given the number of lines its TextAria contains, and their wrapping).
  */
+@Suppress("DEPRECATION")
 class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAria, TextAriaBehavior>(textArea, TextAriaBehavior(textArea)) {
     private var computedMinWidth: Double = Double.NEGATIVE_INFINITY
     private var computedMinHeight: Double = Double.NEGATIVE_INFINITY
@@ -86,6 +87,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
     /** A shared helper object, used only by downLines(). */
     private /*static*/ val tmpCaretPath: Path = Path()
 
+
     init {
         behavior.skin = this//sadly needed AFAICS, to prevent null pointer exceptions.
         //the source of the problem is the design of the super classes:
@@ -114,16 +116,16 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         }
 
         // Add selection
-        selectionHighlightGroup.setManaged(false);
-        selectionHighlightGroup.setVisible(false);
-        contentView.getChildren().add(selectionHighlightGroup);
+        selectionHighlightGroup.isManaged = false
+        selectionHighlightGroup.isVisible = false
+        contentView.children.add(selectionHighlightGroup)
 
         // Add content view
-        paragraphNodes.setManaged(false);
-        contentView.getChildren().add(paragraphNodes);
+        paragraphNodes.isManaged = false
+        contentView.children.add(paragraphNodes)
 
         // Add caret
-        caretPath.setManaged(false);
+        caretPath.isManaged = false
         caretPath.strokeWidth = 1.0
         caretPath.fillProperty().bind(textFill)
         caretPath.strokeProperty().bind(textFill)
@@ -135,10 +137,10 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
                 return if(caretVisible.get()) 1.0 else 0.0
             }
         })
-        contentView.getChildren().add(caretPath);
+        contentView.children.add(caretPath)
 
         if (SHOW_HANDLES) {
-            contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
+            contentView.children.addAll(caretHandle, selectionHandle1, selectionHandle2)
         }
 
         // Add initial text content
@@ -208,24 +210,24 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
         if (SHOW_HANDLES) {
             selectionHandle1.rotate = 180.0
 
-            val handlePressHandler:EventHandler<MouseEvent> =  EventHandler<MouseEvent>{e ->
-                pressX = e.getX();
-                pressY = e.getY();
+            val handlePressHandler:EventHandler<MouseEvent> =  EventHandler<MouseEvent>{mouseEvent ->
+                pressX = mouseEvent.x
+                pressY = mouseEvent.y
                 handlePressed = true;
-                e.consume();
+                mouseEvent.consume();
             }
 
-            val handleReleaseHandler:EventHandler<MouseEvent> =  EventHandler<MouseEvent>{event ->
+            val handleReleaseHandler:EventHandler<MouseEvent> =  EventHandler<MouseEvent>{_ ->
                 handlePressed = false;
             }
 
-            caretHandle.setOnMousePressed(handlePressHandler);
-            selectionHandle1.setOnMousePressed(handlePressHandler);
-            selectionHandle2.setOnMousePressed(handlePressHandler);
+            caretHandle.onMousePressed = handlePressHandler;
+            selectionHandle1.onMousePressed = handlePressHandler;
+            selectionHandle2.onMousePressed = handlePressHandler;
 
-            caretHandle.setOnMouseReleased(handleReleaseHandler);
-            selectionHandle1.setOnMouseReleased(handleReleaseHandler);
-            selectionHandle2.setOnMouseReleased(handleReleaseHandler);
+            caretHandle.onMouseReleased = handleReleaseHandler;
+            selectionHandle1.onMouseReleased = handleReleaseHandler;
+            selectionHandle2.onMouseReleased = handleReleaseHandler;
 
             caretHandle.setOnMouseDragged {e ->
                 val textNode: Text = getTextNode()
@@ -314,7 +316,7 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     private inner class ContentView : Region() {
         init{
-            getStyleClass().add("content");
+            styleClass.add("content");
 
             addEventHandler(MouseEvent.MOUSE_PRESSED) { event ->
                 behavior.mousePressed(event)
@@ -709,10 +711,9 @@ class TextAriaSkin(private val textArea:TextAria) : TextInputControlSkin<TextAri
 
     fun positionCaret(hit: HitInfo, select: Boolean, extendSelection: Boolean) {
         var pos: Int = Utils.getHitInsertionIndex(hit, skinnable.text)
-        val isNewLine: Boolean =
-                (pos > 0 &&
-                        pos <= skinnable.length &&
-                        skinnable.text.codePointAt(pos-1) == 0x0a)
+        val isNewLine: Boolean = pos > 0 &&
+                                 pos <= skinnable.length &&
+                        skinnable.text.codePointAt(pos-1) == 0x0a
 
         // special handling for a line
         if (!hit.isLeading && isNewLine) {
