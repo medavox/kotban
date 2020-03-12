@@ -288,12 +288,18 @@ class Kotban : Application() {
         text = note.title
         isExpanded = false
         isAnimated = false
-        content = TextAria(note.contents).also { textArea ->
-            textArea.isEditable=false
-            textArea.isWrapText = true
-            textArea.prefHeightProperty().bind(textArea.displayTimeHeight)
-            textArea.font = Font.font("monospace")
+        expandedProperty().addListener { observable, oldValue, newValue ->
+            if(oldValue == false && newValue == true && content == null) {
+                val contents = note.file.readText()
+                content = TextAria(contents).also { textArea ->
+                    textArea.isEditable = false
+                    textArea.isWrapText = true
+                    textArea.prefHeightProperty().bind(textArea.displayTimeHeight)
+                    textArea.font = Font.font("monospace")
+                }
+            }
         }
+
         contextMenu = ContextMenu(
             MenuItem("Open note in editor").apply{setOnAction{
                 note.file.openInDefaultTextEditor()

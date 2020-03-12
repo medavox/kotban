@@ -25,7 +25,7 @@ data class Board(val name:String, val columns:List<Column>) {
                     //filter out non-files, unreadables, nonexistent, >10MB, without the right extensions
                     file.isValidFile()
                 }.map { file ->
-                    Note(file = file, title = file.name, contents = file.readText())
+                    Note(file = file, title = file.name)
                 }.sortedBy { it.title })
             }
             //println("panes: $subDirsAndTheirItems")
@@ -36,4 +36,4 @@ data class Board(val name:String, val columns:List<Column>) {
 
 data class Column(val name:String, val folder: File, val notes:List<Note>)
 
-data class Note(val file: File, val title:String, val contents:String)
+data class Note(val file: File, val title:String)
