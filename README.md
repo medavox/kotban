@@ -1,10 +1,14 @@
 Kotban
 ======
 
-A kanban viewer for boards whose contents are stored as a directory tree in git.
+Allows you to use a git repo containing a directory tree of plain-text files as a Kanban board with edit history.
+
+This is just a UI which makes it easier to view the board's cards side-by-side. 
+
+It's entirely optional - the board works without this app, because they're just plain-text files.
 
 Each card is a text file and each column is a directory, 
-so changes to the board can be reflected sanely in commits.
+so changes to the board can be stored in commits.
 
 A directory containing:
 
